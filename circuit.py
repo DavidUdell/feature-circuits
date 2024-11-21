@@ -6,6 +6,7 @@ import json
 import math
 import os
 from collections import defaultdict
+from textwrap import dedent
 import random
 
 import torch as t
@@ -273,7 +274,12 @@ def process_examples(
         num_examples < cfg.num_examples and not cfg.disable_tqdm
     ):  # warn the user
         print(
-            f"Total number of examples is less than {cfg.num_examples}. Using {num_examples} examples instead."
+            dedent(
+                f"""
+                Total number of examples is less than {cfg.num_examples}. Using
+                {num_examples} examples instead.
+                """
+            )
         )
 
     if not cfg.plot_only:
@@ -468,21 +474,36 @@ def main():
         "-d",
         type=str,
         default="simple_train",
-        help="A subject-verb agreement dataset in data/, or a path to a cluster .json.",
+        help=dedent(
+            """
+            A subject-verb agreement dataset in data/, or a path to a 
+            cluster.json.
+            """
+        ),
     )
     parser.add_argument(
         "--num_examples",
         "-n",
         type=int,
         default=100,
-        help="The number of examples from the --dataset over which to average indirect effects.",
+        help=dedent(
+            """
+            The number of examples from the --dataset over which to average
+            indirect effects.
+            """
+        ),
     )
     parser.add_argument(
         "--example_length",
         "-l",
         type=int,
         default=None,
-        help="The max length (if using sum aggregation) or exact length (if not aggregating) of examples.",
+        help=dedent(
+            """
+            The max length (if using sum aggregation) or exact length (if not
+            aggregating) of examples.
+            """
+        ),
     )
     parser.add_argument(
         "--model",
@@ -506,20 +527,35 @@ def main():
         "--dict_id",
         type=str,
         default=10,
-        help="ID of the dictionaries. Use `id` to obtain circuits on neurons/heads directly.",
+        help=dedent(
+            """
+            ID of the dictionaries. Use `id` to obtain circuits on
+            neurons/heads directly.
+            """
+        ),
     )
     parser.add_argument(
         "--batch_size",
         type=int,
         default=32,
-        help="Number of examples to process at once when running circuit discovery.",
+        help=dedent(
+            """
+            Number of examples to process at once when running circuit
+            discovery.
+            """
+        ),
     )
     parser.add_argument(
         "--aggregation",
         type=str,
         default="sum",
         choices=["sum", "last", "none"],
-        help="Aggregation across token positions. Should be one of `sum` or `none`.",
+        help=dedent(
+            """
+            Aggregation across token positions. Should be one of `sum` or
+            `none`.
+            """
+        ),
     )
     parser.add_argument(
         "--node_threshold",
@@ -538,7 +574,12 @@ def main():
         "--max_nodes",
         type=int,
         default=50,
-        help="Limit feats/submod to at most this many, regardless of thresholding strategy (topk that pass threshold test)",
+        help=dedent(
+            """
+            Limit feats/submod to at most this many, regardless of thresholding
+            strategy (topk that pass threshold test)
+            """
+        ),
     )
     parser.add_argument(
         "--edge_threshold",
@@ -564,7 +605,12 @@ def main():
         type=str,
         default="none",
         choices=["none", "source-sink", "sink-backwards", "first-layer-sink"],
-        help="Pruning method for the finished circuit (see circuit_plotting.build_pruned_graph)",
+        help=dedent(
+            """
+            Pruning method for the finished circuit (see
+            circuit_plotting.build_pruned_graph)
+            """
+        ),
     )
     parser.add_argument(
         "--edge_thickness_normalization",
@@ -584,7 +630,12 @@ def main():
         "--prompt",
         type=str,
         default="None",
-        help="Input a custom prompt to generate a circuit on. Only used when data_type is 'prompt'.",
+        help=dedent(
+            """
+            Input a custom prompt to generate a circuit on. Only used when
+            data_type is 'prompt'.
+            """
+        ),
     )
 
     hist_options = parser.add_argument_group("Histogram collection options")
@@ -592,14 +643,22 @@ def main():
         "--collect_hists",
         default=0,
         type=int,
-        help="Collect histograms of edge and node weights for the first collect_hists examples rather"
-        " than compute circuits. 0 to disable.",
+        help=dedent(
+            """
+            Collect histograms of edge and node weights for the first
+            collect_hists examples rather than compute circuits. 0 to disable.
+            """
+        ),
     )
     hist_options.add_argument(
         "--accumulate_hists",
         default=False,
         action="store_true",
-        help="Accumulate histograms from existing files in the circuit directory.",
+        help=dedent(
+            """
+            Accumulate histograms from existing files in the circuit directory.
+            """
+        ),
     )
     hist_options.add_argument(
         "--histogram_path",
@@ -611,7 +670,13 @@ def main():
         "--bootstrap_path",
         default=None,
         type=str,
-        help="If set, histogram_path will be used to load an existing histogram to set thresholds, and then a new one will be written to at bootstrap_path.",
+        help=dedent(
+            """
+            If set, histogram_path will be used to load an existing histogram
+            to set thresholds, and then a new one will be written to at
+            bootstrap_path.
+            """
+        ),
     )
 
     parser.add_argument(
@@ -624,7 +689,11 @@ def main():
         "--nodes_only",
         default=False,
         action="store_true",
-        help="Only search for causally implicated features; do not draw edges.",
+        help=dedent(
+            """
+            Only search for causally implicated features; do not draw edges.
+            """
+        ),
     )
     parser.add_argument(
         "--plot_only",
