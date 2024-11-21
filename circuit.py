@@ -508,7 +508,7 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        default="EleutherAI/pythia-70m-deduped",
+        default="gpt2",
         help="The Huggingface ID of the model you wish to test.",
     )
     parser.add_argument(
@@ -526,7 +526,7 @@ def main():
     parser.add_argument(
         "--dict_id",
         type=str,
-        default=10,
+        default="gpt2",
         help=dedent(
             """
             ID of the dictionaries. Use `id` to obtain circuits on
@@ -623,13 +623,13 @@ def main():
         "--data_type",
         type=str,
         choices=["nopair", "regular", "hf", "prompt"],
-        default="regular",
+        default="prompt",
         help="Specify the type of the dataset.",
     )
     parser.add_argument(
         "--prompt",
         type=str,
-        default="None",
+        default="The capital of France is Paris",
         help=dedent(
             """
             Input a custom prompt to generate a circuit on. Only used when
@@ -681,7 +681,7 @@ def main():
 
     parser.add_argument(
         "--plot_circuit",
-        default=False,
+        default=True,
         action="store_true",
         help="Plot the circuit after discovering it.",
     )
