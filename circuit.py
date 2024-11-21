@@ -1,3 +1,5 @@
+"""Run this script directly with `python3 circuit.py` for plotting."""
+
 import argparse
 import gc
 import json
@@ -48,8 +50,10 @@ def aggregate_nodes_edges(
         nodes (dict): dictionary of nodes
         edges (dict): dictionary of edges
         dims (tuple): dimensions to aggregate over
-        divisor_dim (int): if last_agg=False, then results will be divided by the size of this dimension. Otherwise has no effect.
-        last_agg (bool): if True, then the last element of the specified dimension for each dimension in dims will be selected
+        divisor_dim (int): if last_agg=False, then results will be divided by
+        the size of this dimension. Otherwise has no effect.
+        last_agg (bool): if True, then the last element of the specified
+        dimension for each dimension in dims will be selected
     """
 
     for child in edges:
