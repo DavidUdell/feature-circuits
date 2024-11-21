@@ -89,6 +89,7 @@ def aggregate_nodes_edges(
 
 
 def clear_cache():
+    """Simply clear cuda and Python memory."""
     t.cuda.empty_cache()
     gc.collect()
 
