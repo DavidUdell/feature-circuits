@@ -36,16 +36,22 @@ def _pe_attrib(
     submodules,
     dictionaries,
     metric_fn,
-    metric_kwargs=dict(),
+    metric_kwargs=None,
 ):
+    """Run attribution patching."""
+    if not metric_kwargs:
+        metric_kwargs: dict = {}
 
-    # first run through a test input to figure out which hidden states are tuples
+    # first run through a test input to figure out which hidden states are
+    # tuples
     output_submods = {}
     with model.trace("_"):
         for submodule in submodules:
             output_submods[submodule] = submodule.output.save()
 
-    is_tuple = {k: type(v.shape) == tuple for k, v in output_submods.items()}
+    is_tuple = {
+        k: isinstance(v.shape, tuple) for k, v in output_submods.items()
+    }
 
     hidden_states_clean = {}
     grads = {}
@@ -117,7 +123,9 @@ def _pe_attrib(
             # print("delta", delta.shape, 'grad', grad.shape)
             effect = (
                 delta @ grad
-            )  # this is just elementwise product for activations, and something weird for err
+            )  # this is just elementwise product for activations, and
+            #  something weird for err
+
             # print("effect for", submodule, effect.shape)  # for SAE errors
             effects[submodule] = effect
             deltas[submodule] = delta
@@ -135,16 +143,22 @@ def _pe_ig(
     dictionaries,
     metric_fn,
     steps=10,
-    metric_kwargs=dict(),
+    metric_kwargs=None,
 ):
+    """Run integrated gradients."""
+    if not metric_kwargs:
+        metric_kwargs: dict = {}
 
-    # first run through a test input to figure out which hidden states are tuples
+    # first run through a test input to figure out which hidden states are
+    # tuples
     output_submods = {}
     with model.trace("_"):
         for submodule in submodules:
             output_submods[submodule] = submodule.output.save()
 
-    is_tuple = {k: type(v.shape) == tuple for k, v in output_submods.items()}
+    is_tuple = {
+        k: isinstance(v.shape, tuple) for k, v in output_submods.items()
+    }
 
     hidden_states_clean = {}
     with model.trace(clean, **tracer_kwargs), t.no_grad():
@@ -215,7 +229,8 @@ def _pe_ig(
             metric = sum([m for m in metrics])
             metric.sum().backward(
                 retain_graph=True
-            )  # TODO : why is this necessary? Probably shouldn't be, contact jaden
+            )  #  Why is this necessary? Probably shouldn't be,
+            #  contact jaden
 
         mean_grad = sum([f.act.grad for f in fs]) / steps
         mean_residual_grad = sum([f.res.grad for f in fs]) / steps
@@ -243,13 +258,16 @@ def _pe_exact(
     metric_fn,
 ):
 
-    # first run through a test input to figure out which hidden states are tuples
+    # first run through a test input to figure out which hidden states are
+    # tuples
     output_submods = {}
     with model.trace("_"):
         for submodule in submodules:
             output_submods[submodule] = submodule.output.save()
 
-    is_tuple = {k: type(v.shape) == tuple for k, v in output_submods.items()}
+    is_tuple = {
+        k: isinstance(v.shape, tuple) for k, v in output_submods.items()
+    }
 
     hidden_states_clean = {}
     with model.trace(clean, **tracer_kwargs), t.inference_mode():
@@ -352,8 +370,12 @@ def patching_effect(
     metric_fn,
     method="attrib",
     steps=10,
-    metric_kwargs=dict(),
+    metric_kwargs=None,
 ):
+    """Route to specified patching method."""
+    if not metric_kwargs:
+        metric_kwargs: dict = {}
+
     if method == "attrib":
         return _pe_attrib(
             clean,
@@ -364,7 +386,7 @@ def patching_effect(
             metric_fn,
             metric_kwargs=metric_kwargs,
         )
-    elif method == "ig":
+    if method == "ig":
         return _pe_ig(
             clean,
             patch,
@@ -375,12 +397,11 @@ def patching_effect(
             steps=steps,
             metric_kwargs=metric_kwargs,
         )
-    elif method == "exact":
+    if method == "exact":
         return _pe_exact(
             clean, patch, model, submodules, dictionaries, metric_fn
         )
-    else:
-        raise ValueError(f"Unknown method {method}")
+    raise ValueError(f"Unknown method {method}")
 
 
 def threshold_effects(
@@ -391,24 +412,32 @@ def threshold_effects(
     stack=True,
 ):
     """
-    Return the indices of the top-k features with the highest absolute effect, or if as_threshold is True, the indices
-    of the features with absolute effect greater than threshold.
+    Return the indices of the top-k features with the highest absolute effect,
+    or if as_threshold is True, the indices of the features with absolute
+    effect greater than threshold.
 
     Args:
         effect: tensor to apply threshold to
-        cfg: configuration object, contains relevant parameters for controlling thresholds
-        effect_name: name of the effect tensor (for indexing into cfg.node_thresholds, if necessary, and also for determining whether it is a node or edge effect)
-        stack: whether to stack the indices into a tensor. Only has effect if as_threshold is False
-        k_sparsity: if not None, the number of features to return (otherwise, calculated from `effect` and `threshold`)
-        aggregated: only has effect if sparsity is the method. If True, sparsity level will be multiplied by seq_len
-            to match thresholding behaviour in earlier parts of the circuit discovery process
+        cfg: configuration object, contains relevant parameters for controlling
+            thresholds
+        effect_name: name of the effect tensor (for indexing into
+        cfg.node_thresholds, if necessary, and also for determining whether it
+            is a node or edge effect)
+        stack: whether to stack the indices into a tensor. Only has effect if
+            as_threshold is False
+        k_sparsity: if not None, the number of features to return (otherwise,
+            calculated from `effect` and `threshold`)
+        aggregated: only has effect if sparsity is the method. If True,
+            sparsity level will be multiplied by seq_len to match thresholding
+            behaviour in earlier parts of the circuit discovery process
 
     Returns:
         if stack == False:
             indices: indices of the top-k features
             values: values of the top-k
         else:
-            indices: indices of the top-k features, stacked into a tensor, and then .tolist()'d
+            indices: indices of the top-k features, stacked into a tensor, and
+                then .tolist()'d
     """
     is_edge = isinstance(effect_name, tuple)
     if is_edge:
@@ -428,8 +457,10 @@ def threshold_effects(
     if method == ThresholdType.SPARSITY:
         # if k_sparsity is None:
         k_sparsity = int(
-            threshold * cfg.example_length
-        )  # dont scale by n_features to ensure that we the same number of features per SAE
+            threshold  # pylint: disable=possibly-used-before-assignment
+            * cfg.example_length
+        )  # dont scale by n_features to ensure that we the same number
+        #  of features per SAE
         if cfg.max_nodes is not None:
             k_sparsity = min(k_sparsity, cfg.max_nodes)
         topk = effect.abs().flatten().topk(k_sparsity)
@@ -463,13 +494,19 @@ def threshold_effects(
 
 
 def get_empty_edge(device):
+    """
+    Return a zeroes tensor on the device.
+
+    Uses the torch specialized Coordinate tensor format, for efficient
+    sparse-tensor representation.
+    """
     return t.sparse_coo_tensor(
         t.zeros((6, 0), dtype=t.long), t.zeros(0), (0,) * 6, is_coalesced=True
     ).to(device)
 
 
 def jvp(
-    input,
+    inputs,
     model,
     dictionaries,
     downstream_submod,
@@ -482,7 +519,8 @@ def jvp(
     intermediate_stop_grads=None,
 ):
     """
-    Return a sparse shape [# downstream features + 1, # upstream features + 1] tensor of Jacobian-vector products.
+    Return a sparse shape [# downstream features + 1, # upstream features + 1]
+    tensor of Jacobian-vector products.
     """
 
     if intermediate_stop_grads is None:
@@ -491,7 +529,8 @@ def jvp(
     if not downstream_features:  # handle empty list
         return get_empty_edge(model.device)
 
-    # first run through a test input to figure out which hidden states are tuples
+    # first run through a test input to figure out which hidden states are
+    # tuples
     output_submods = {}
     with model.trace("_"):
         for submodule in [
@@ -500,7 +539,9 @@ def jvp(
         ] + intermediate_stop_grads:
             output_submods[submodule] = submodule.output.save()
 
-    is_tuple = {k: type(v.shape) == tuple for k, v in output_submods.items()}
+    is_tuple = {
+        k: isinstance(v.shape, tuple) for k, v in output_submods.items()
+    }
 
     # if cfg.edge_thresh_type == ThresholdType.SPARSITY:
     #     n_enc = dictionaries[upstream_submod].encoder.out_features
@@ -520,7 +561,7 @@ def jvp(
     if cfg.collect_hists > 0:
         hist = hist_agg.get_edge_hist(upstream_submod, downstream_submod)
 
-    with model.trace(input, **tracer_kwargs):
+    with model.trace(inputs, **tracer_kwargs):
         # first specify forward pass modifications
         x = upstream_submod.output.save()
         if is_tuple[upstream_submod]:
