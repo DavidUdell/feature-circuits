@@ -1,9 +1,11 @@
+"""Business logic for attribution patching."""
+
 from collections import namedtuple
+from typing import Dict, Union
+
 import torch as t
 from tqdm import tqdm
 from numpy import ndindex
-from typing import Dict, Union
-import torch
 
 from config import Config
 from histogram_aggregator import (
@@ -13,6 +15,7 @@ from histogram_aggregator import (
     NEEDS_HIST,
 )
 from activation_utils import SparseAct
+
 
 DEBUGGING = False
 
@@ -99,7 +102,7 @@ def _pe_attrib(
 
     effects = {}
     deltas = {}
-    with torch.no_grad():
+    with t.no_grad():
         for submodule in submodules:
             patch_state, clean_state, grad = (
                 hidden_states_patch[submodule],
