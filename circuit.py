@@ -101,7 +101,7 @@ def get_circuit(
     cfg: Config,
     hist_agg: HistAggregator,
     metric_fn,
-    metric_kwargs=dict(),
+    metric_kwargs={},
 ):
 
     all_submods = ([embed] if embed is not None else []) + [
@@ -119,7 +119,7 @@ def get_circuit(
         dictionaries,
         metric_fn,
         metric_kwargs=metric_kwargs,
-        method=cfg.method,  # get better approximations for early layers by using ig
+        method=cfg.method,  # ig gets better approximations for early layers
     )
 
     clear_cache()  # helps a bit with memory management
@@ -299,7 +299,9 @@ def process_examples(
     # feature annotations
     try:
         annotations = {}
-        with open(f"annotations/{cfg.dict_id}.jsonl", "r") as annotations_data:
+        with open(
+            f"annotations/{cfg.dict_id}.jsonl", "r", encoding="utf-8"
+        ) as annotations_data:
             for annotation_line in annotations_data:
                 annotation = json.loads(annotation_line)
                 annotations[annotation["Name"]] = annotation["Annotation"]
