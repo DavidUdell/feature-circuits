@@ -6,19 +6,19 @@ This repository contains code, data, and links to autoencoders for replicating t
 - We provide an interface for exploring and downloading clusters [here](https://feature-circuits.xyz).
 - View our SAEs and their features on [Neuronpedia](https://www.neuronpedia.org/p70d-sm).
 
-## Installation
+## Installation and Use
 
-Use python >= 3.10. To install dependencies, use
+Use Python 3.10 or newer. Note that you'll need an H100 GPU.
 ```
 pip install -r requirements.txt
-```
-
-You will also need to clone the [dictionary learning repository](https://github.com/saprmarks/dictionary_learning). Run this command from the root directory of this repository to get that code:
-```
 git submodule update --init
+pip install -r dictionary_learning/requirements.txt
+
+pip uninstall torchvision
+pip install -U torch
+
+python3 circuit.py
 ```
-
-
 ## Data
 ### Subject–Verb Agreement
 We create modified versions of the stimuli from [Finlayson et al. (2021)](https://aclanthology.org/2021.acl-long.144/) (code [here](https://github.com/mattf1n/lm-intervention)). Specifically, we use the same nouns and structures, but modify the verb sets to only include those whose singular and plural inflections are single tokens in Pythia. Our data may be found in `data/`.
