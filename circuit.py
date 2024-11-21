@@ -6,7 +6,6 @@ import os
 from collections import defaultdict
 import random
 
-import numpy as np
 import torch as t
 from tqdm import tqdm
 
