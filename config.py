@@ -1,9 +1,9 @@
 """Set up config dataclass."""
 
 import dataclasses
-from typing import Literal
 from argparse import Namespace
 from enum import Enum
+from typing import Literal
 
 from histogram_aggregator import ThresholdType
 
@@ -95,4 +95,12 @@ class Config:
         return d
 
     def as_fname(self):
-        return f'dict{self.dict_id}_node{self.node_threshold}-{self.node_thresh_type.value}_edge{self.edge_threshold}-{self.edge_thresh_type.value}_agg{self.aggregation}_method{self.method}_prune{self.prune_method}_model{self.model.replace("/", "_")}'
+        """Construct filename from config values."""
+        return (
+            f"dict{self.dict_id}_"
+            f"node{self.node_threshold}-{self.node_thresh_type.value}_"
+            f"edge{self.edge_threshold}-{self.edge_thresh_type.value}_"
+            f"agg{self.aggregation}_method{self.method}_"
+            f"prune{self.prune_method}_"
+            f"model{self.model.replace('/', '_')}"
+        )
