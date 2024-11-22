@@ -50,7 +50,8 @@ def _pe_attrib(
             output_submods[submodule] = submodule.output.save()
 
     is_tuple = {
-        k: isinstance(v.shape, tuple) for k, v in output_submods.items()
+        k: type(v.shape) == tuple  # pylint: disable=unidiomatic-typecheck
+        for k, v in output_submods.items()
     }
 
     hidden_states_clean = {}
@@ -157,7 +158,8 @@ def _pe_ig(
             output_submods[submodule] = submodule.output.save()
 
     is_tuple = {
-        k: isinstance(v.shape, tuple) for k, v in output_submods.items()
+        k: type(v.shape) == tuple  # pylint: disable=unidiomatic-typecheck
+        for k, v in output_submods.items()
     }
 
     hidden_states_clean = {}
@@ -266,7 +268,8 @@ def _pe_exact(
             output_submods[submodule] = submodule.output.save()
 
     is_tuple = {
-        k: isinstance(v.shape, tuple) for k, v in output_submods.items()
+        k: type(v.shape) == tuple  # pylint: disable=unidiomatic-typecheck
+        for k, v in output_submods.items()
     }
 
     hidden_states_clean = {}
@@ -540,7 +543,8 @@ def jvp(
             output_submods[submodule] = submodule.output.save()
 
     is_tuple = {
-        k: isinstance(v.shape, tuple) for k, v in output_submods.items()
+        k: type(v.shape) == tuple  # pylint: disable=unidiomatic-typecheck
+        for k, v in output_submods.items()
     }
 
     # if cfg.edge_thresh_type == ThresholdType.SPARSITY:
