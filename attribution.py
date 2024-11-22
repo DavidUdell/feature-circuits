@@ -82,6 +82,7 @@ def _pe_attrib(
     hidden_states_clean = {k: v.value for k, v in hidden_states_clean.items()}
     grads = {k: v.value for k, v in grads.items()}
 
+    # Default is `patch` is None
     if patch is None:
         hidden_states_patch = {
             k: SparseAct(act=t.zeros_like(v.act), res=t.zeros_like(v.res))
