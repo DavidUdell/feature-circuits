@@ -30,7 +30,7 @@ class Config:
         #  of thresholding strategy (topk that pass threshold test)
     )
     nodes_only: bool = False
-    method: Literal["ig", "attrib", "exact"] = "ig"
+    method: Literal["ig", "attrib", "exact"] = "attrib"
     aggregation: Literal["none", "sum"] = "sum"
     prune_method: Literal[
         "none", "source-sink", "sink-backwards", "first-layer-sink"
