@@ -263,6 +263,10 @@ def process_examples(
     cfg: Config,
     hist_agg: HistAggregator,
 ):
+    # Suppress transformers deprecation warning
+    model.tokenizer.deprecation_warnings["Asking-to-pad-a-fast-tokenizer"] = (
+        True
+    )
     batch_size = cfg.batch_size
     num_examples = min([cfg.num_examples, len(examples)])
     n_batches = math.ceil(num_examples / batch_size)
