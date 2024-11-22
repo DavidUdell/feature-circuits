@@ -16,15 +16,18 @@ class Config:
     node_threshold: float = 0.0
     edge_threshold: float = 0.0
     node_thresholds: dict[str, float] = (
-        None  # mapping from submod name to threshold to be used (typically, we auto-generate this)
+        None  # mapping from submod name to threshold to be used
+        #  (typically, we auto-generate this)
     )
     edge_thresholds: dict[dict[str, str], float] = (
-        None  # mapping from submod name to threshold to be used (typically, we auto-generate this)
+        None  # mapping from submod name to threshold to be used
+        #  (typically, we auto-generate this)
     )
     node_thresh_type: ThresholdType = ThresholdType.THRESH
     edge_thresh_type: ThresholdType = ThresholdType.THRESH
     max_nodes: int = (
-        50  # limit feats/submod to at most this many, regardless of thresholding strategy (topk that pass threshold test)
+        50  # limit feats/submod to at most this many, regardless
+        #  of thresholding strategy (topk that pass threshold test)
     )
     nodes_only: bool = False
     method: Literal["ig", "attrib", "exact"] = "ig"
@@ -33,10 +36,13 @@ class Config:
         "none", "source-sink", "sink-backwards", "first-layer-sink"
     ] = "none"
     collect_hists: int = (
-        0  # if > 0 then collect histograms for the first collect_hists examples
+        0  # if > 0 then collect histograms for the first collect_hists
+        #  examples
     )
     bootstrap: bool = (
-        False  # if True, an existing histogram will be used to compute thresholds for a given histogram collection run (but we won't write to that one)
+        False  # if True, an existing histogram will be used to compute
+        #  thresholds for a given histogram collection run (but we won't
+        #  write to that one)
     )
     circuit_dir: str = ""  # base path to circuit files
     plot_dir: str = ""  # base path to plots
