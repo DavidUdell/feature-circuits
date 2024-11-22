@@ -76,16 +76,19 @@ class Config:
     seed: int | None = None
 
     def update(self, args: Namespace):
+        """Update dataclass instance args values from namespace object."""
         for k, v in vars(args).items():
             if hasattr(self, k):
                 setattr(self, k, v)
 
     def update_from_dict(self, args: dict):
+        """Update dataclass instance args values from dict."""
         for k, v in args.items():
             if hasattr(self, k):
                 setattr(self, k, v)
 
     def asdict(self):
+        """Return dataclass instance as a dict."""
         # used for debugging purposes only, don't use this for serialization or
         # loading
         d = dataclasses.asdict(self)
