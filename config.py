@@ -1,3 +1,5 @@
+"""Set up config dataclass."""
+
 import dataclasses
 from typing import Literal
 from argparse import Namespace
@@ -8,6 +10,8 @@ from histogram_aggregator import ThresholdType
 
 @dataclasses.dataclass
 class Config:
+    """Config dataclass with default settings for interp pipeline."""
+
     # Algorithm controls
     node_threshold: float = 0.0
     edge_threshold: float = 0.0
@@ -76,7 +80,8 @@ class Config:
                 setattr(self, k, v)
 
     def asdict(self):
-        # used for debugging purposes only, don't use this for serialization or loading
+        # used for debugging purposes only, don't use this for serialization or
+        # loading
         d = dataclasses.asdict(self)
         for k, v in d.items():
             if isinstance(v, Enum):
