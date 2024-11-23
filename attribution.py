@@ -3,6 +3,7 @@
 from collections import namedtuple
 from typing import Dict, Union
 
+import nnsight
 import torch as t
 from tqdm import tqdm
 from numpy import ndindex
@@ -79,8 +80,12 @@ def _pe_attrib(
             x.grad = x_recon.grad
         metric_clean = metric_fn(model, **metric_kwargs).save()
         metric_clean.sum().backward()
-    hidden_states_clean = {k: v.value for k, v in hidden_states_clean.items()}
-    grads = {k: v.value for k, v in grads.items()}
+    # Since these dict entries below are envoy objects at this point, their
+    # values aren't yet examinable.
+    hidden_states_clean: dict[nnsight.envoy.Envoy] = {
+        k: v.value for k, v in hidden_states_clean.items()
+    }
+    grads: dict[nnsight.envoy.Envoy] = {k: v.value for k, v in grads.items()}
 
     # Default is `patch` is None
     if patch is None:

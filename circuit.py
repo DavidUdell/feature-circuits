@@ -117,6 +117,7 @@ def get_circuit(
     ]
 
     # first get the patching effect of everything on y
+    # Key intermediate values exposed here.
     effects, deltas, grads, total_effect = patching_effect(
         clean,
         patch,
@@ -127,6 +128,10 @@ def get_circuit(
         metric_kwargs=metric_kwargs,
         method=cfg.method,  # ig gets better approximations for early layers
     )
+    # effects: dict[nnsight.envoy.Envoy]
+    # deltas: dict[nnsight.envoy.Envoy]
+    # grads: dict[nnsight.envoy.Envoy]
+    # total_effect: None
 
     clear_cache()  # helps a bit with memory management
 
