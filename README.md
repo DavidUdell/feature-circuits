@@ -11,7 +11,7 @@ This repository contains code, data, and links to autoencoders for replicating t
 ## Installation and Use
 
 > [!WARNING]
-> Note that you'll need either an H100 GPU or an A100 80GB.
+> You'll need either an H100 GPU or an A100 80GB.
 
 ```
 pip install -r requirements.txt
