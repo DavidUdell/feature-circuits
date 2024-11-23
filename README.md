@@ -2,11 +2,16 @@
 ![Nvidia H100 80GB](https://img.shields.io/badge/H100%2080GB-green?style=flat&logo=nvidia&logoSize=200000&label=Nvidia)
 ![Nvidia A100 80GB](https://img.shields.io/badge/A100%2080GB-green?style=flat&logo=nvidia&logoSize=200000&label=Nvidia)
 
-This repository contains code, data, and links to autoencoders for replicating the experiments of [Sparse Feature Circuits: Discovering and Editing Interpretable Causal Graphs in Language Models](https://arxiv.org/abs/2403.19647). 
+This repository contains code, data, and links to autoencoders for replicating
+the experiments of [Sparse Feature Circuits: Discovering and Editing
+Interpretable Causal Graphs in Language
+Models](https://arxiv.org/abs/2403.19647). 
 
 ## Demos and Links
-- We provide an interface for exploring and downloading clusters [here](https://feature-circuits.xyz).
-- View our SAEs and their features on [Neuronpedia](https://www.neuronpedia.org/p70d-sm).
+- We provide an interface for exploring and downloading clusters
+  [here](https://feature-circuits.xyz).
+- View our SAEs and their features on
+  [Neuronpedia](https://www.neuronpedia.org/p70d-sm).
 
 ## Installation and Use
 
