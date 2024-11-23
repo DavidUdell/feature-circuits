@@ -27,9 +27,11 @@ python3 circuit.py > log.txt
 Use Python 3.10 or newer.
 
 ## Data
-> [!IMPORTANT] README content from here on comes from the original repository
-> release, and may no longer be accurate guidance about this fork's current
-> state.
+
+> [!IMPORTANT]
+>README content from here on comes from the original repository release, and
+> may no longer be accurate guidance about this fork's current state.
+
 ### Subject–Verb Agreement
 We create modified versions of the stimuli from [Finlayson et al. (2021)](https://aclanthology.org/2021.acl-long.144/) (code [here](https://github.com/mattf1n/lm-intervention)). Specifically, we use the same nouns and structures, but modify the verb sets to only include those whose singular and plural inflections are single tokens in Pythia. Our data may be found in `data/`.
 
