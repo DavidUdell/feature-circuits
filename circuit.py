@@ -139,9 +139,10 @@ def get_circuit(
     for submod in all_submods:
         effect = effects[submod].to_tensor()
 
+        # Debug program state print
         print(
             get_submod_repr(submod),
-            "effects sum:",
+            "effects:",
             round(effect.sum().item(), 2),
         )
 
