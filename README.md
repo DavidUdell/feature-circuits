@@ -19,7 +19,7 @@ pip install -r dictionary_learning/requirements.txt
 pip uninstall torchvision
 pip install -U torch
 
-python3 circuit.py
+python3 circuit.py > log.txt
 ```
 
 > [!NOTE]

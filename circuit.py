@@ -138,16 +138,23 @@ def get_circuit(
     features_by_submod = {}
     for submod in all_submods:
         effect = effects[submod].to_tensor()
+
+        print(
+            get_submod_repr(submod),
+            "effects sum:",
+            round(effect.sum().item(), 2),
+        )
+
         if cfg.collect_hists > 0:
             hist_agg.compute_node_hist(submod, effect)
         features_by_submod[submod] = threshold_effects(
             effect, cfg, submod, hist_agg
         )
-        print(
-            "\tn_feats",
-            get_submod_repr(submod),
-            len(features_by_submod[submod]),
-        )
+        # print(
+        #     "\tn_feats",
+        #     get_submod_repr(submod),
+        #     len(features_by_submod[submod]),
+        # )
 
     if len(features_by_submod[resids[-1]]) == 0:
         print("No features found for last layer. Skipping...")

@@ -168,4 +168,5 @@ nohup.out
 **/*.pt
 data/*
 dictionaries
+log.txt
 
