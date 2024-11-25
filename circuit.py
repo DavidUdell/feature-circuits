@@ -136,14 +136,17 @@ def get_circuit(
     clear_cache()  # helps a bit with memory management
 
     features_by_submod = {}
+
+    print("Effect Sums:")
     for submod in all_submods:
         effect = effects[submod].to_tensor()
+        effect_last = effect[:, -1, :]
 
         # Debug program state print
         print(
             get_submod_repr(submod),
-            "effects:",
-            round(effect.sum().item(), 2),
+            str(list(effect_last.shape)) + ":",
+            round(effect_last.sum().item(), 1),
         )
 
         if cfg.collect_hists > 0:
@@ -156,6 +159,7 @@ def get_circuit(
         #     get_submod_repr(submod),
         #     len(features_by_submod[submod]),
         # )
+    print()
 
     if len(features_by_submod[resids[-1]]) == 0:
         print("No features found for last layer. Skipping...")

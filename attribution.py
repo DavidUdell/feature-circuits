@@ -88,18 +88,27 @@ def _pe_attrib(
     grads: dict[nnsight.envoy.Envoy] = {k: v.value for k, v in grads.items()}
 
     # Debug program state prints
+    print("Activation Sums:")
     for submod in submodules:
+        act_last: t.Tensor = hidden_states_clean[submod].to_tensor()[:, -1, :]
+
         print(
             get_submod_repr(submod),
-            "acts:",
-            round(hidden_states_clean[submod].to_tensor().sum().item(), 2),
+            str(list(act_last.shape)) + ":",
+            round(act_last.sum().item(), 1),
         )
+    print()
+
+    print("Gradient Sums:")
     for submod in submodules:
+        grad_last: t.Tensor = grads[submod].to_tensor()[:, -1, :]
+
         print(
             get_submod_repr(submod),
-            "grads:",
-            round(grads[submod].to_tensor().sum().item(), 2),
+            str(list(grad_last.shape)) + ":",
+            round(grad_last.sum().item(), 1),
         )
+    print()
 
     # Default is `patch` is None
     if patch is None:
