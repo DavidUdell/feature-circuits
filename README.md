@@ -25,11 +25,11 @@ python3 circuit.py > log.txt
 
 Use Python 3.10 or newer.
 
-## Demos and Links
-
 > [!IMPORTANT]
 >README content from here on comes from the original repository release, and
 > may no longer be accurate guidance about this fork's current state.
+
+## Demos and Links
 
 - We provide an interface for exploring and downloading clusters
   [here](https://feature-circuits.xyz).
