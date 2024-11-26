@@ -51,7 +51,7 @@ def load_model_dicts(args, cfg):
             # Standardizing resid_post with the rest.
             dictionaries[resids[i]] = AutoEncoder.from_hf(
                 "jbloom/GPT2-Small-OAI-v5-128k-resid-post-SAEs",
-                f"v5_128k_layer_{i}.pt/sae_weights.safetensors",
+                f"v5_128k_layer_{i}/sae_weights.safetensors",
                 device=device,
             )
             dictionaries[mlps[i]] = AutoEncoder.from_hf(
