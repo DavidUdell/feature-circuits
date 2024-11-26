@@ -1,5 +1,7 @@
 """Sparse autoencoder and histogram loading functionality."""
 
+from textwrap import dedent
+
 from nnsight import LanguageModel
 
 from dictionary_learning import AutoEncoder
@@ -8,6 +10,7 @@ from histogram_aggregator import NEEDS_HIST, HistAggregator
 
 
 def load_model_dicts(args, cfg):
+    """Load sparse autoencoders."""
     device = cfg.device
 
     model = LanguageModel(cfg.model, device_map=device, dispatch=True)
@@ -43,6 +46,7 @@ def load_model_dicts(args, cfg):
             )
         )
 
+        # GPT-2 case.
         for i in range(len(model.transformer.h)):
             dictionaries[resids[i]] = AutoEncoder.from_hf(
                 "jbloom/GPT2-Small-OAI-v5-32k-resid-post-SAEs",
@@ -61,29 +65,33 @@ def load_model_dicts(args, cfg):
             )
     else:
         cfg.update_from_dict(
-            dict(
-                resid_posn="post",
-                parallel_attn=True,
-                first_component="embed",
-                layers=6,
-                d_model=512,
-            )
+            {
+                "resid_posn": "post",
+                "parallel_attn": True,
+                "first_component": "embed",
+                "layers": 6,
+                "d_model": 512,
+            }
         )
+        pre: str = args.dict_path
+        post: str = args.dict_id
+
+        # Pythia case.
         dictionaries[embed] = AutoEncoder.from_pretrained(
-            f"{args.dict_path}/embed/{args.dict_id}_32768/ae.pt", device=device
+            f"{pre}/embed/{post}_32768/ae.pt", device=device
         )
 
         for i in range(len(model.gpt_neox.layers)):
             dictionaries[resids[i]] = AutoEncoder.from_pretrained(
-                f"{args.dict_path}/resid_out_layer{i}/{args.dict_id}_32768/ae.pt",
+                f"{pre}/resid_out_layer{i}/{post}_32768/ae.pt",
                 device=device,
             )
             dictionaries[mlps[i]] = AutoEncoder.from_pretrained(
-                f"{args.dict_path}/mlp_out_layer{i}/{args.dict_id}_32768/ae.pt",
+                f"{pre}/mlp_out_layer{i}/{post}_32768/ae.pt",
                 device=device,
             )
             dictionaries[attns[i]] = AutoEncoder.from_pretrained(
-                f"{args.dict_path}/attn_out_layer{i}/{args.dict_id}_32768/ae.pt",
+                f"{pre}/attn_out_layer{i}/{post}_32768/ae.pt",
                 device=device,
             )
 
@@ -91,6 +99,7 @@ def load_model_dicts(args, cfg):
 
 
 def load_hists(args, cfg, save_basename):
+    """Load neuron-basis activation histograms."""
     hist_agg = HistAggregator(cfg.model)
 
     needs_hist = (
@@ -109,7 +118,12 @@ def load_hists(args, cfg, save_basename):
 
         if ret_val is None and needs_hist:
             raise ValueError(
-                "Threshold method requires histogram, but no existing histogram was found. Please run with --collect_hists first."
+                dedent(
+                    """
+                    Threshold method requires histogram, but no existing
+                    histogram was found. Please run with --collect_hists first.
+                    """
+                )
             )
 
     if cfg.node_thresh_type in NEEDS_HIST:
