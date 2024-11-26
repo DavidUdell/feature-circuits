@@ -48,9 +48,10 @@ def load_model_dicts(args, cfg):
 
         # GPT-2 case.
         for i in range(len(model.transformer.h)):
+            # Standardizing resid_post with the rest.
             dictionaries[resids[i]] = AutoEncoder.from_hf(
-                "jbloom/GPT2-Small-OAI-v5-32k-resid-post-SAEs",
-                f"v5_32k_layer_{i}.pt/sae_weights.safetensors",
+                "jbloom/GPT2-Small-OAI-v5-128k-resid-post-SAEs",
+                f"v5_128k_layer_{i}.pt/sae_weights.safetensors",
                 device=device,
             )
             dictionaries[mlps[i]] = AutoEncoder.from_hf(
@@ -63,6 +64,7 @@ def load_model_dicts(args, cfg):
                 f"v5_128k_layer_{i}/sae_weights.safetensors",
                 device=device,
             )
+
     else:
         cfg.update_from_dict(
             {
