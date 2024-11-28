@@ -88,6 +88,7 @@ def _pe_attrib(
     grads: dict[nnsight.envoy.Envoy] = {k: v.value for k, v in grads.items()}
 
     # Debug program state prints
+    print("Loss (clean)", metric_clean.item())
     print("Activation Sums:")
     for submod in submodules:
         act_last: t.Tensor = hidden_states_clean[submod].to_tensor()[:, -1, :]

@@ -385,6 +385,7 @@ def compute_circuit(
         clean_inputs = t.cat([e["clean_prefix"] for e in batch], dim=0).to(
             cfg.device
         )
+        print("Token ids (clean):", clean_inputs)
         clean_answer_idxs = t.tensor(
             [e["clean_answer"] for e in batch], dtype=t.long, device=cfg.device
         )
