@@ -648,6 +648,7 @@ def main():
         default="prompt",
         help="Specify the type of the dataset.",
     )
+    # The repo currently seems to chop off the last token in the sequence.
     parser.add_argument(
         "--prompt",
         type=str,
