@@ -651,7 +651,7 @@ def main():
     parser.add_argument(
         "--prompt",
         type=str,
-        default="The capital of France is Paris",
+        default="  ",
         help=dedent(
             """
             Input a custom prompt to generate a circuit on. Only used when
