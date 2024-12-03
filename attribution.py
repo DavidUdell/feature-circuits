@@ -96,7 +96,7 @@ def _pe_attrib(
         print(
             get_submod_repr(submod),
             str(list(act_last.shape)) + ":\n",
-            act_last,
+            act_last.detach().to("cpu"),
             end="\n\n",
         )
     print()
@@ -108,7 +108,7 @@ def _pe_attrib(
         print(
             get_submod_repr(submod),
             str(list(grad_last.shape)) + ":\n",
-            grad_last,
+            grad_last.to("cpu"),
             end="\n\n",
         )
     print()
