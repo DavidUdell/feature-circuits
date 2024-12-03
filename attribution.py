@@ -89,25 +89,27 @@ def _pe_attrib(
 
     # Debug program state prints
     print("Loss (clean)", metric_clean.item())
-    print("Activation Sums:")
+    print("Activation Tensors:")
     for submod in submodules:
         act_last: t.Tensor = hidden_states_clean[submod].to_tensor()[:, -1, :]
 
         print(
             get_submod_repr(submod),
-            str(list(act_last.shape)) + ":",
-            round(act_last.sum().item(), 1),
+            str(list(act_last.shape)) + ":\n",
+            act_last,
+            end="\n\n",
         )
     print()
 
-    print("Gradient Sums:")
+    print("Gradient Tensors:")
     for submod in submodules:
         grad_last: t.Tensor = grads[submod].to_tensor()[:, -1, :]
 
         print(
             get_submod_repr(submod),
-            str(list(grad_last.shape)) + ":",
-            round(grad_last.sum().item(), 1),
+            str(list(grad_last.shape)) + ":\n",
+            grad_last,
+            end="\n\n",
         )
     print()
 

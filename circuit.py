@@ -117,7 +117,7 @@ def get_circuit(
     ]
 
     # first get the patching effect of everything on y
-    # Key intermediate values exposed here.
+    # Key intermediate values exposed in here.
     effects, deltas, grads, total_effect = patching_effect(
         clean,
         patch,
