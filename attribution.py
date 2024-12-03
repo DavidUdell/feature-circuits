@@ -5,6 +5,7 @@ from typing import Dict, Union
 
 import nnsight
 import torch as t
+import transformers
 from tqdm import tqdm
 from numpy import ndindex
 
@@ -57,6 +58,13 @@ def _pe_attrib(
 
     hidden_states_clean = {}
     grads = {}
+
+    # Override prior token manipulations.
+    token = model.tokenizer(" ")["input_ids"]
+    clean = t.tensor(token, dtype=t.long).unsqueeze(0).unsqueeze(0)
+    print("Input token ids:", clean, clean.shape)
+    print()
+
     with model.trace(clean, **tracer_kwargs):
         for submodule in submodules:
             dictionary = dictionaries[submodule]
@@ -78,17 +86,34 @@ def _pe_attrib(
             else:
                 submodule.output = x_recon
             x.grad = x_recon.grad
-        metric_clean = metric_fn(model, **metric_kwargs).save()
-        metric_clean.sum().backward()
-    # Since these dict entries below are envoy objects at this point, their
-    # values aren't yet examinable.
+        metric_clean, logits = metric_fn(model, **metric_kwargs)
+        metric_clean = metric_clean.save()
+        metric_clean.backward()
+    # Since these dict entries below are envoy objects above this point, their
+    # values weren't yet examinable.
+
+    # Logits shapes: torch.Size([50257])
+    print("Logits:", logits)
+    print("Logits sum:", logits.sum().item())
+
+    # Logits: [-31.1560, -30.1380, -32.1625,..., -40.2942, -39.4496, -30.5216]
+    # Logits sum: -1890479.75
+
+    # In the other repo:
+    # Logits: [-31.4403, -30.4095, -32.4390,..., -40.6363, -39.7879, -30.8165]
+    # Logits sum: -1906496.0
+
     hidden_states_clean: dict[nnsight.envoy.Envoy] = {
         k: v.value for k, v in hidden_states_clean.items()
     }
     grads: dict[nnsight.envoy.Envoy] = {k: v.value for k, v in grads.items()}
 
-    # Debug program state prints
-    print("Loss (clean)", metric_clean.item())
+    print("Loss: ", metric_clean.item())
+    print()
+    # Loss: 5.46258020401001
+    # In the other repo:
+    # Loss: 5.467480659484863
+
     print("Activation Tensors:")
     for submod in submodules:
         act_last: t.Tensor = hidden_states_clean[submod].to_tensor()[:, -1, :]
@@ -421,21 +446,21 @@ def patching_effect(
             metric_fn,
             metric_kwargs=metric_kwargs,
         )
-    if method == "ig":
-        return _pe_ig(
-            clean,
-            patch,
-            model,
-            submodules,
-            dictionaries,
-            metric_fn,
-            steps=steps,
-            metric_kwargs=metric_kwargs,
-        )
-    if method == "exact":
-        return _pe_exact(
-            clean, patch, model, submodules, dictionaries, metric_fn
-        )
+    # if method == "ig":
+    #     return _pe_ig(
+    #         clean,
+    #         patch,
+    #         model,
+    #         submodules,
+    #         dictionaries,
+    #         metric_fn,
+    #         steps=steps,
+    #         metric_kwargs=metric_kwargs,
+    #     )
+    # if method == "exact":
+    #     return _pe_exact(
+    #         clean, patch, model, submodules, dictionaries, metric_fn
+    #     )
     raise ValueError(f"Unknown method {method}")
 
 
