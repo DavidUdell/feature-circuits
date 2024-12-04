@@ -122,8 +122,10 @@ def _pe_attrib(
             get_submod_repr(submod),
             str(list(act_last.shape)) + ":\n",
             act_last.detach().to("cpu"),
-            end="\n\n",
         )
+        # The initial (autoencoder) act slice matches exactly. The error slice
+        # (the complement) is the first divergence.
+        print("slice[131072:]:", act_last.squeeze()[131072:], end="\n\n")
     print()
 
     print("Gradient Tensors:")
