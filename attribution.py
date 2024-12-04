@@ -117,15 +117,23 @@ def _pe_attrib(
     print("Activation Tensors:")
     for submod in submodules:
         act_last: t.Tensor = hidden_states_clean[submod].to_tensor()[:, -1, :]
+        act_autoencoder = act_last.squeeze()[:131072].detach().to("cpu")
+        act_error = act_last.squeeze()[131072:].detach().to("cpu")
 
         print(
             get_submod_repr(submod),
-            str(list(act_last.shape)) + ":\n",
-            act_last.detach().to("cpu"),
+            str(list(act_autoencoder.shape)) + ":\n",
+            act_autoencoder,
+            end="\n\n",
         )
         # The initial (autoencoder) act slice matches exactly. The error slice
         # (the complement) is the first divergence.
-        print("slice[131072:]:", act_last.squeeze()[131072:], end="\n\n")
+        print(
+            get_submod_repr(submod) + " error",
+            str(list(act_error.shape)) + ":\n",
+            act_error,
+            end="\n\n",
+        )
     print()
 
     print("Gradient Tensors:")
