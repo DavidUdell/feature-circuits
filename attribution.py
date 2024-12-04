@@ -92,7 +92,7 @@ def _pe_attrib(
     # Since these dict entries below are envoy objects above this point, their
     # values weren't yet examinable.
 
-    # Logits shapes: torch.Size([50257])
+    # Logits shapes: [50257]
     print("Logits:", logits)
     print("Logits sum:", logits.sum().item())
 
@@ -100,8 +100,8 @@ def _pe_attrib(
     # Logits sum: -1890479.75
 
     # In the other repo:
-    # Logits: [-31.4403, -30.4095, -32.4390,..., -40.6363, -39.7879, -30.8165]
-    # Logits sum: -1906496.0
+    # Logits: [-31.1560, -30.1380, -32.1625,...,-40.2943, -39.4497, -30.5216]
+    # Logits sum: -1890481.5
 
     hidden_states_clean: dict[nnsight.envoy.Envoy] = {
         k: v.value for k, v in hidden_states_clean.items()
@@ -112,7 +112,7 @@ def _pe_attrib(
     print()
     # Loss: 5.46258020401001
     # In the other repo:
-    # Loss: 5.467480659484863
+    # Loss: 5.462571144104004
 
     print("Activation Tensors:")
     for submod in submodules:
