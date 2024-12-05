@@ -85,6 +85,8 @@ def _pe_attrib(
                 submodule.output[0][:] = x_recon
             else:
                 submodule.output = x_recon
+            # This line below x.grad = x_recon.grad is responsible for the grad
+            # diffs between implementations.
             x.grad = x_recon.grad
         metric_clean, logits = metric_fn(model, **metric_kwargs)
         metric_clean = metric_clean.save()
@@ -153,7 +155,6 @@ def _pe_attrib(
             grad_error,
             end="\n\n",
         )
-
     print()
 
     # Default is `patch` is None
