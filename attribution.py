@@ -100,7 +100,7 @@ def _pe_attrib(
     # Logits sum: -1890479.75
 
     # In the other repo:
-    # Logits: [-31.1560, -30.1380, -32.1625,...,-40.2943, -39.4497, -30.5216]
+    # Logits: [-31.1560, -30.1380, -32.1625,..., -40.2943, -39.4497, -30.5216]
     # Logits sum: -1890481.5
 
     hidden_states_clean: dict[nnsight.envoy.Envoy] = {
@@ -121,31 +121,39 @@ def _pe_attrib(
         act_error = act_last.squeeze()[131072:].detach().to("cpu")
 
         print(
-            get_submod_repr(submod),
+            get_submod_repr(submod) + " act",
             str(list(act_autoencoder.shape)) + ":\n",
             act_autoencoder,
             end="\n\n",
         )
-        # The initial (autoencoder) act slice matches exactly. The error slice
-        # (the complement) is the first divergence.
         print(
-            get_submod_repr(submod) + " error",
+            get_submod_repr(submod) + " error act",
             str(list(act_error.shape)) + ":\n",
             act_error,
             end="\n\n",
         )
+        # Both of the act tensors match across implementations.
     print()
 
     print("Gradient Tensors:")
     for submod in submodules:
         grad_last: t.Tensor = grads[submod].to_tensor()[:, -1, :]
+        grad_autoencoder = grad_last.squeeze()[:131072].detach().to("cpu")
+        grad_error = grad_last.squeeze()[131072:].detach().to("cpu")
 
         print(
-            get_submod_repr(submod),
-            str(list(grad_last.shape)) + ":\n",
-            grad_last.to("cpu"),
+            get_submod_repr(submod) + " grad",
+            str(list(grad_autoencoder.shape)) + ":\n",
+            grad_autoencoder,
             end="\n\n",
         )
+        print(
+            get_submod_repr(submod) + " error grad",
+            str(list(grad_error.shape)) + ":\n",
+            grad_error,
+            end="\n\n",
+        )
+
     print()
 
     # Default is `patch` is None
