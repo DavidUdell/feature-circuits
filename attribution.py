@@ -48,16 +48,16 @@ def _pe_attrib(
     # tuples
     output_submods = {}
     with model.trace("_"):
-        for submodule in submodules:
-            output_submods[submodule] = submodule.output.save()
+        for sublayer in submodules:
+            output_submods[sublayer] = sublayer.output.save()
 
     is_tuple = {
         k: type(v.shape) == tuple  # pylint: disable=unidiomatic-typecheck
         for k, v in output_submods.items()
     }
 
-    hidden_states_clean = {}
-    grads = {}
+    acts_dict = {}
+    grads_dict = {}
 
     # Override prior token manipulations.
     token = model.tokenizer(" ")["input_ids"]
@@ -66,31 +66,37 @@ def _pe_attrib(
     print()
 
     with model.trace(clean, **tracer_kwargs):
-        for submodule in submodules:
-            dictionary = dictionaries[submodule]
-            x = submodule.output
-            if is_tuple[submodule]:
-                x = x[0]
-            x_hat, f = dictionary(
-                x, output_features=True
-            )  # x_hat implicitly depends on f
-            residual = x - x_hat
-            hidden_states_clean[submodule] = SparseAct(
-                act=f, res=residual
+        for sublayer in submodules:
+            dictionary = dictionaries[sublayer]
+            output = sublayer.output
+            if is_tuple[sublayer]:
+                output = output[0]
+            decoded_acts, projected_acts = dictionary(
+                output, output_features=True
+            )
+            error = output - decoded_acts
+
+            # Save to acts_dict and grads_dict
+            acts_dict[sublayer] = SparseAct(
+                act=projected_acts, res=error
             ).save()
-            grads[submodule] = hidden_states_clean[submodule].grad.save()
-            residual.grad = t.zeros_like(residual)
-            x_recon = x_hat + residual
-            if is_tuple[submodule]:
-                submodule.output[0][:] = x_recon
+            grads_dict[sublayer] = acts_dict[sublayer].grad.save()
+
+            error.grad = t.zeros_like(error)
+            reconstructed = decoded_acts + error
+
+            if is_tuple[sublayer]:
+                sublayer.output[0][:] = reconstructed
             else:
-                submodule.output = x_recon
+                sublayer.output = reconstructed
+
             # This line below x.grad = x_recon.grad is responsible for the grad
             # diffs between implementations.
-            x.grad = x_recon.grad
-        metric_clean, logits = metric_fn(model, **metric_kwargs)
-        metric_clean = metric_clean.save()
-        metric_clean.backward()
+            output.grad = reconstructed.grad
+
+        loss, logits = metric_fn(model, **metric_kwargs)
+        loss = loss.save()
+        loss.backward()
     # Since these dict entries below are envoy objects above this point, their
     # values weren't yet examinable.
 
@@ -105,12 +111,14 @@ def _pe_attrib(
     # Logits: [-31.1560, -30.1380, -32.1625,..., -40.2943, -39.4497, -30.5216]
     # Logits sum: -1890481.5
 
-    hidden_states_clean: dict[nnsight.envoy.Envoy] = {
-        k: v.value for k, v in hidden_states_clean.items()
+    acts_dict: dict[nnsight.envoy.Envoy] = {
+        k: v.value for k, v in acts_dict.items()
     }
-    grads: dict[nnsight.envoy.Envoy] = {k: v.value for k, v in grads.items()}
+    grads_dict: dict[nnsight.envoy.Envoy] = {
+        k: v.value for k, v in grads_dict.items()
+    }
 
-    print("Loss: ", metric_clean.item())
+    print("Loss: ", loss.item())
     print()
     # Loss: 5.46258020401001
     # In the other repo:
@@ -118,7 +126,7 @@ def _pe_attrib(
 
     print("Activation Tensors:")
     for submod in submodules:
-        act_last: t.Tensor = hidden_states_clean[submod].to_tensor()[:, -1, :]
+        act_last: t.Tensor = acts_dict[submod].to_tensor()[:, -1, :]
         act_autoencoder = act_last.squeeze()[:131072].detach().to("cpu")
         act_error = act_last.squeeze()[131072:].detach().to("cpu")
 
@@ -139,7 +147,7 @@ def _pe_attrib(
 
     print("Gradient Tensors:")
     for submod in submodules:
-        grad_last: t.Tensor = grads[submod].to_tensor()[:, -1, :]
+        grad_last: t.Tensor = grads_dict[submod].to_tensor()[:, -1, :]
         grad_autoencoder = grad_last.squeeze()[:131072].detach().to("cpu")
         grad_error = grad_last.squeeze()[131072:].detach().to("cpu")
 
@@ -161,24 +169,26 @@ def _pe_attrib(
     if patch is None:
         hidden_states_patch = {
             k: SparseAct(act=t.zeros_like(v.act), res=t.zeros_like(v.res))
-            for k, v in hidden_states_clean.items()
+            for k, v in acts_dict.items()
         }
         total_effect = None
     else:
         hidden_states_patch = {}
         with model.trace(patch, **tracer_kwargs), t.inference_mode():
-            for submodule in submodules:
-                dictionary = dictionaries[submodule]
-                x = submodule.output
-                if is_tuple[submodule]:
-                    x = x[0]
-                x_hat, f = dictionary(x, output_features=True)
-                residual = x - x_hat
-                hidden_states_patch[submodule] = SparseAct(
-                    act=f, res=residual
+            for sublayer in submodules:
+                dictionary = dictionaries[sublayer]
+                output = sublayer.output
+                if is_tuple[sublayer]:
+                    output = output[0]
+                decoded_acts, projected_acts = dictionary(
+                    output, output_features=True
+                )
+                error = output - decoded_acts
+                hidden_states_patch[sublayer] = SparseAct(
+                    act=projected_acts, res=error
                 ).save()
             metric_patch = metric_fn(model, **metric_kwargs).save()
-        total_effect = (metric_patch.value - metric_clean.value).detach()
+        total_effect = (metric_patch.value - loss.value).detach()
         hidden_states_patch = {
             k: v.value for k, v in hidden_states_patch.items()
         }
@@ -186,11 +196,11 @@ def _pe_attrib(
     effects = {}
     deltas = {}
     with t.no_grad():
-        for submodule in submodules:
+        for sublayer in submodules:
             patch_state, clean_state, grad = (
-                hidden_states_patch[submodule],
-                hidden_states_clean[submodule],
-                grads[submodule],
+                hidden_states_patch[sublayer],
+                acts_dict[sublayer],
+                grads_dict[sublayer],
             )
             delta = (
                 patch_state - clean_state.detach()
@@ -204,12 +214,12 @@ def _pe_attrib(
             #  something weird for err
 
             # print("effect for", submodule, effect.shape)  # for SAE errors
-            effects[submodule] = effect
-            deltas[submodule] = delta
-            grads[submodule] = grad
+            effects[sublayer] = effect
+            deltas[sublayer] = delta
+            grads_dict[sublayer] = grad
         total_effect = total_effect if total_effect is not None else None
 
-    return EffectOut(effects, deltas, grads, total_effect)
+    return EffectOut(effects, deltas, grads_dict, total_effect)
 
 
 def _pe_ig(
