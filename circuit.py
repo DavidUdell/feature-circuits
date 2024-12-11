@@ -406,9 +406,9 @@ def compute_circuit(
             def metric_fn(model):
                 metric = t.nn.CrossEntropyLoss()
                 # clean_answer_idxs: tensor(220, device='cuda:0')
-                logits = model_out.output.squeeze().save()
+                logits = model_out.output[0, 0, -1, :].save()
                 loss = metric(
-                    model_out.output.squeeze(),
+                    logits,
                     clean_answer_idxs.squeeze(),
                 )
                 return loss, logits
@@ -667,7 +667,7 @@ def main():
     parser.add_argument(
         "--prompt",
         type=str,
-        default=" ",
+        default="Hello, world",
         help=dedent(
             """
             Input a custom prompt to generate a circuit on. Only used when
@@ -719,7 +719,7 @@ def main():
 
     parser.add_argument(
         "--plot_circuit",
-        default=True,
+        default=False,
         action="store_true",
         help="Plot the circuit after discovering it.",
     )

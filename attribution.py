@@ -60,7 +60,7 @@ def _pe_attrib(
     grads_dict = {}
 
     # Override prior token manipulations.
-    token = model.tokenizer(" ")["input_ids"]
+    token = model.tokenizer("Hello, world")["input_ids"]
     clean = t.tensor(token, dtype=t.long).unsqueeze(0).unsqueeze(0)
     print("Input token ids:", clean, clean.shape)
     print()
