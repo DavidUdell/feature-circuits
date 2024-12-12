@@ -572,6 +572,9 @@ def threshold_effects(
         raise ValueError(f"Unknown thresholding method {method}")
 
     if isinstance(effect, t.Tensor):
+        # Localized bug to here and the final return statement of this
+        # function; ind is sometimes a larger int than the length of
+        # effect.flatten().
         if ind.shape[0] > cfg.max_nodes:
             values = effect.flatten()[ind]
             topk = values.abs().topk(cfg.max_nodes)

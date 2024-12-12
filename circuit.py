@@ -151,6 +151,23 @@ def get_circuit(
 
         if cfg.collect_hists > 0:
             hist_agg.compute_node_hist(submod, effect)
+
+        # effect.flatten().shape: [393219]
+        # Example length: None
+        # Max nodes: 50
+        # Node threshold: 0.2
+        # Edge threshold: 0.02
+        # indices = t.nonzero(effect.abs().flatten() > 0.2).flatten().shape
+        # values = effect.flatten()[indices]
+        # topk = values.abs().topk(50)
+        # indices_final = indices[topk.indices]
+
+        # print("Indices:\n", indices)
+        # print("Values:\n", values)
+        # print("Top-k:\n", topk)
+        # print("Final indices:\n", indices_final)
+        # print()
+
         features_by_submod[submod] = threshold_effects(
             effect, cfg, submod, hist_agg
         )
