@@ -736,7 +736,7 @@ def main():
 
     parser.add_argument(
         "--plot_circuit",
-        default=False,
+        default=True,
         action="store_true",
         help="Plot the circuit after discovering it.",
     )
