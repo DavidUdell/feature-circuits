@@ -402,7 +402,6 @@ def compute_circuit(
         clean_inputs = t.cat([e["clean_prefix"] for e in batch], dim=0).to(
             cfg.device
         )
-        print("Token ids (clean):", clean_inputs)
         clean_answer_idxs = t.tensor(
             [e["clean_answer"] for e in batch], dtype=t.long, device=cfg.device
         )
@@ -415,13 +414,18 @@ def compute_circuit(
             patch_inputs = None
 
             def metric_fn(model):
-                return -1 * t.gather(
-                    t.nn.functional.log_softmax(
-                        model_out.output[:, -1, :], dim=-1
-                    ),
-                    dim=-1,
-                    index=clean_answer_idxs.view(-1, 1),
-                ).squeeze(-1)
+                # Return (loss, logits)
+                return (
+                    -1
+                    * t.gather(
+                        t.nn.functional.log_softmax(
+                            model_out.output[:, -1, :], dim=-1
+                        ),
+                        dim=-1,
+                        index=clean_answer_idxs.view(-1, 1),
+                    ).squeeze(-1),
+                    model_out.output[:, -1, :],
+                )
 
         else:
             patch_inputs = t.cat([e["patch_prefix"] for e in batch], dim=0).to(

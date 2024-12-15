@@ -60,8 +60,6 @@ def _pe_attrib(
     grads_dict = {}
 
     # Override prior token manipulations.
-    token = model.tokenizer("Hello, world")["input_ids"]
-    clean = t.tensor(token, dtype=t.long).unsqueeze(0).unsqueeze(0)
     print("Input token ids:", clean, clean.shape)
     print()
 
@@ -96,6 +94,7 @@ def _pe_attrib(
 
         loss, logits = metric_fn(model, **metric_kwargs)
         loss = loss.save()
+        logits = logits.save()
         loss.backward()
     # Since these dict entries below are envoy objects above this point, their
     # values weren't yet examinable.
