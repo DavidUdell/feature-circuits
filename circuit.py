@@ -13,7 +13,7 @@ import torch as t
 from tqdm import tqdm
 
 
-from histogram_aggregator import HistAggregator, ThresholdType
+from histogram_aggregator import HistAggregator, ThresholdType, get_submod_repr
 from attribution import patching_effect, jvp, threshold_effects
 from circuit_plotting import plot_circuit
 from load_model import load_hists, load_model_dicts
@@ -402,16 +402,10 @@ def compute_circuit(
         clean_inputs = t.cat([e["clean_prefix"] for e in batch], dim=0).to(
             cfg.device
         )
-        clean_answer_idxs = (
-            t.tensor(
-                [e["clean_answer"] for e in batch],
-                dtype=t.long,
-                device=cfg.device,
-            )
-            .unsqueeze(0)
-            .unsqueeze(0)
+        print("Token ids (clean):", clean_inputs)
+        clean_answer_idxs = t.tensor(
+            [e["clean_answer"] for e in batch], dtype=t.long, device=cfg.device
         )
-        print("Index tensor:", clean_answer_idxs, clean_answer_idxs.shape)
         if cfg.model == "gpt2":
             model_out = model.lm_head
         else:
@@ -421,45 +415,36 @@ def compute_circuit(
             patch_inputs = None
 
             def metric_fn(model):
-                metric = t.nn.CrossEntropyLoss()
-                # clean_answer_idxs: tensor(220, device='cuda:0')
-                logits = model_out.output[0, 0, -1, :].save()
-                loss = metric(
-                    logits,
-                    clean_answer_idxs.squeeze(),
-                )
-                return loss, logits
-                # return -1 * t.gather(
-                #     t.nn.functional.log_softmax(
-                #         model_out.output[:, -1, :], dim=-1
-                #     ),
-                #     dim=-1,
-                #     index=clean_answer_idxs,
-                # ).squeeze(-1)
+                return -1 * t.gather(
+                    t.nn.functional.log_softmax(
+                        model_out.output[:, -1, :], dim=-1
+                    ),
+                    dim=-1,
+                    index=clean_answer_idxs.view(-1, 1),
+                ).squeeze(-1)
 
         else:
-            raise ValueError("Should not have been reached.")
-            # patch_inputs = t.cat([e["patch_prefix"] for e in batch],
-            #     dim=0).to( cfg.device
-            # )
-            # patch_answer_idxs = t.tensor(
-            #     [e["patch_answer"] for e in batch],
-            #     dtype=t.long,
-            #     device=cfg.device,
-            # )
+            patch_inputs = t.cat([e["patch_prefix"] for e in batch], dim=0).to(
+                cfg.device
+            )
+            patch_answer_idxs = t.tensor(
+                [e["patch_answer"] for e in batch],
+                dtype=t.long,
+                device=cfg.device,
+            )
 
-            # def metric_fn(model):
-            #     return t.gather(
-            #         model_out.output[:, -1, :],
-            #         dim=-1,
-            #         index=patch_answer_idxs.view(-1, 1),
-            #     ).squeeze(-1) - t.gather(
-            #         model_out.output[:, -1, :],
-            #         dim=-1,
-            #         index=clean_answer_idxs.view(-1, 1),
-            #     ).squeeze(
-            #         -1
-            #     )
+            def metric_fn(model):
+                return t.gather(
+                    model_out.output[:, -1, :],
+                    dim=-1,
+                    index=patch_answer_idxs.view(-1, 1),
+                ).squeeze(-1) - t.gather(
+                    model_out.output[:, -1, :],
+                    dim=-1,
+                    index=clean_answer_idxs.view(-1, 1),
+                ).squeeze(
+                    -1
+                )
 
         nodes, edges = get_circuit(
             clean_inputs,

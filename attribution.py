@@ -528,39 +528,58 @@ def threshold_effects(
             indices: indices of the top-k features, stacked into a tensor, and
                 then .tolist()'d
     """
-    # Hardcoding these, as with the prompt, for debugging-the-other-repo
-    # purposes.
-    max_nodes: int = 1
-
     is_edge = isinstance(effect_name, tuple)
     if is_edge:
         effect_name = [get_submod_repr(submod) for submod in effect_name]
     else:
         effect_name = get_submod_repr(effect_name)
+    method = cfg.edge_thresh_type if is_edge else cfg.node_thresh_type
+
+    if method in NEEDS_HIST:
+        if is_edge:
+            hist = hist_agg.edges[effect_name[0]][effect_name[1]]
+        else:
+            hist = hist_agg.nodes[effect_name]
+    else:
+        threshold = cfg.edge_threshold if is_edge else cfg.node_threshold
+
+    if method == ThresholdType.SPARSITY:
+        # if k_sparsity is None:
+        k_sparsity = int(
+            threshold  # pylint: disable=possibly-used-before-assignment
+            * cfg.example_length
+        )  # dont scale by n_features to ensure that we the same number
+        #  of features per SAE
+        if cfg.max_nodes is not None:
+            k_sparsity = min(k_sparsity, cfg.max_nodes)
+        topk = effect.abs().flatten().topk(k_sparsity)
+        topk_ind = topk.indices[topk.values > 0]
+        if stack:
+            return t.stack(
+                t.unravel_index(topk_ind, effect.shape), dim=1
+            ).tolist()
+        return topk_ind, topk.values[topk.values > 0]
+
+    if method in NEEDS_HIST:
+        if isinstance(effect, t.Tensor):
+            ind = hist.threshold(effect, effect.ndim)
+        else:
+            ind = hist.threshold(effect)
+
+    elif method == ThresholdType.THRESH:
+        ind = t.nonzero(effect.abs().flatten() > threshold).flatten()
+    else:
+        raise ValueError(f"Unknown thresholding method {method}")
 
     if isinstance(effect, t.Tensor):
-        flat_effect = effect.flatten()
-        indices = t.nonzero(flat_effect).flatten()
-        values = flat_effect[indices]
-        topk = values.abs().topk(max_nodes)
-        indices = indices[topk.indices]
-        unraveled = t.unravel_index(indices, effect.shape)
-        returnable = t.stack(unraveled, dim=1)
-        print("returning from tensor")
-        return returnable
+        if ind.shape[0] > cfg.max_nodes:
+            values = effect.flatten()[ind]
+            topk = values.abs().topk(cfg.max_nodes)
+            ind = ind[topk.indices]
 
-    assert isinstance(
-        effect, nnsight.models.LanguageModel.LanguageModelProxy
-    ), type(effect)
-    indices = t.nonzero(effect.abs().flatten()).flatten()
-    unraveled = t.unravel_index(indices, effect.shape)
-
-    new_unraveled = []
-    for i in unraveled:
-        new_unraveled.append(i.to_tensor())
-    returnable = t.stack(new_unraveled, dim=1)
-    print("returning from nnsight")
-    return returnable
+    if stack:
+        return t.stack(t.unravel_index(ind, effect.shape), dim=1).tolist()
+    return ind, effect.flatten()[ind]
 
 
 def get_empty_edge(device):
@@ -596,8 +615,7 @@ def jvp(
     if intermediate_stop_grads is None:
         intermediate_stop_grads = []
 
-    # handle empty indices tensor
-    if downstream_features.numel() == 0:
+    if not downstream_features:  # handle empty list
         return get_empty_edge(model.device)
 
     # first run through a test input to figure out which hidden states are
