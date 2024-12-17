@@ -540,7 +540,7 @@ def main():
         "--example_length",
         "-l",
         type=int,
-        default=None,
+        default=3,
         help=dedent(
             """
             The max length (if using sum aggregation) or exact length (if not
@@ -603,20 +603,20 @@ def main():
     parser.add_argument(
         "--node_threshold",
         type=float,
-        default=0.0,
+        default=7.5,
         help="Indirect effect threshold for keeping circuit nodes.",
     )
     parser.add_argument(
         "--node_thresh_type",
         type=ThresholdType,
-        default=ThresholdType.THRESH,
+        default=ThresholdType.SPARSITY,
         choices=list(ThresholdType),
         help="Threshold type for node_threshold.",
     )
     parser.add_argument(
         "--max_nodes",
         type=int,
-        default=10,
+        default=100,
         help=dedent(
             """
             Limit feats/submod to at most this many, regardless of thresholding
@@ -627,13 +627,13 @@ def main():
     parser.add_argument(
         "--edge_threshold",
         type=float,
-        default=0.0,
+        default=7.5,
         help="Indirect effect threshold for keeping edges.",
     )
     parser.add_argument(
         "--edge_thresh_type",
         type=ThresholdType,
-        default=ThresholdType.THRESH,
+        default=ThresholdType.SPARSITY,
         choices=list(ThresholdType),
         help="Threshold type for edge_threshold.",
     )
@@ -646,7 +646,7 @@ def main():
     parser.add_argument(
         "--prune_method",
         type=str,
-        default="sink-backwards",
+        default="none",
         choices=["none", "source-sink", "sink-backwards", "first-layer-sink"],
         help=dedent(
             """
