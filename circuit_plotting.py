@@ -275,31 +275,31 @@ def build_pruned_graph(nodes, edges, nodes_by_submod, cfg: Config):
     return pruned_graph
 
 
-def add_node_prune_filter(name, G, pruned_G, **kwargs):
-    if pruned_G is not None and name not in pruned_G.nodes:
+def add_node_prune_filter(name, graph, pruned_graph, **kwargs):
+    if pruned_graph is not None and name not in pruned_graph.nodes:
         return
-    G.node(name, **kwargs)
+    graph.node(name, **kwargs)
 
 
-def add_edge_prune_filter(uname, dname, G, pruned_G, **kwargs):
-    if pruned_G is not None and (uname, dname) not in pruned_G.edges:
+def add_edge_prune_filter(uname, dname, graph, pruned_graph, **kwargs):
+    if pruned_graph is not None and (uname, dname) not in pruned_graph.edges:
         return
-    G.edge(uname, dname, **kwargs)
+    graph.edge(uname, dname, **kwargs)
 
 
 def add_layer_nodes_to_graph(
-    G: Digraph,
+    graph: Digraph,
     component: str,
     layer: int,
     nodes: dict[str, t.Tensor],
     nodes_by_submod: dict[str, t.Tensor],
     to_hex: Callable,
     get_label: Callable,
-    pruned_G: nx.DiGraph,
+    pruned_graph: nx.DiGraph,
 ):
     component_name = f"{component}_{layer}" if layer != -1 else component
     err_idx = nodes[component_name].shape[0]
-    with G.subgraph(name=f"layer {layer} {component}") as subgraph:
+    with graph.subgraph(name=f"layer {layer} {component}") as subgraph:
         subgraph.attr(rank="same")
         max_seq_pos = None
         for idx, effect in nodes_by_submod[component_name].items():
@@ -309,7 +309,7 @@ def add_layer_nodes_to_graph(
                 add_node_prune_filter(
                     name,
                     subgraph,
-                    pruned_G,
+                    pruned_graph,
                     shape="triangle",
                     width="1.6",
                     height="0.8",
@@ -322,13 +322,14 @@ def add_layer_nodes_to_graph(
                 add_node_prune_filter(
                     name,
                     subgraph,
-                    pruned_G,
+                    pruned_graph,
                     label=get_label(name),
                     fillcolor=fillhex,
                     fontcolor=texthex,
                     style="filled",
                 )
-            # if sequence position is present, separate nodes by sequence position
+            # if sequence position is present, separate nodes by sequence
+            # position
             match idx:
                 case (seq, _):
                     subgraph.node(
@@ -372,29 +373,39 @@ def build_formatted_graph(
     cfg: Config,
     nodes_by_submod,
     example_text,
-    pruned_G,
+    pruned_graph,
 ):
-    G = Digraph(name="Feature circuit")
-    G.graph_attr.update(rankdir="BT", newrank="true")
-    G.node_attr.update(shape="box", style="rounded")
+    """Build out the formatted Digraph object."""
+
+    graph = Digraph(name="Feature circuit")
+
+    graph.graph_attr.update(rankdir="BT", newrank="true")
+    graph.node_attr.update(shape="box", style="rounded")
 
     if cfg.first_component == "embed":
         add_layer_nodes_to_graph(
-            G, "embed", -1, nodes, nodes_by_submod, to_hex, get_label, pruned_G
+            graph,
+            "embed",
+            -1,
+            nodes,
+            nodes_by_submod,
+            to_hex,
+            get_label,
+            pruned_graph,
         )
 
     for layer in trange(cfg.layers):
         # add all nodes for this layer
         for component in ["attn", "mlp", "resid"]:
             add_layer_nodes_to_graph(
-                G,
+                graph,
                 component,
                 layer,
                 nodes,
                 nodes_by_submod,
                 to_hex,
                 get_label,
-                pruned_G,
+                pruned_graph,
             )
 
         # add all edges
@@ -404,17 +415,16 @@ def build_formatted_graph(
             add_edge_prune_filter(
                 uname,
                 dname,
-                G,
-                pruned_G,
+                graph,
+                pruned_graph,
                 penwidth=normalize_weight(weight, edge_scale, cfg),
                 color="red" if weight < 0 else "blue",
             )
 
-    # the cherry on top
     formatted_text = example_text.replace("\\", "\\\\")
     if cfg.resid_posn == "post":
         add_node_prune_filter(
-            "y", G, pruned_G, shape="diamond", xlabel=formatted_text
+            "y", graph, pruned_graph, shape="diamond", xlabel=formatted_text
         )
         err_idx = nodes[f"resid_{cfg.layers-1}"].shape[0]
         jacobian = edges[f"resid_{cfg.layers-1}"]["y"]
@@ -427,13 +437,13 @@ def build_formatted_graph(
             add_edge_prune_filter(
                 name,
                 "y",
-                G,
-                pruned_G,
+                graph,
+                pruned_graph,
                 penwidth=normalize_weight(weight, edge_scale, cfg),
                 color="red" if weight < 0 else "blue",
             )
 
-    return G
+    return graph
 
 
 def plot_circuit_posaligned(
