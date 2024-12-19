@@ -14,6 +14,7 @@ from config import Config
 from attribution import threshold_effects
 from histogram_aggregator import HistAggregator
 
+
 def get_name(component, layer, idx, err_idx, add_layer=True):
     """Component is a high-level SAE location, like resid_0, or mlp_5.
     It can also be just the component name, like 'resid'.
@@ -25,24 +26,29 @@ def get_name(component, layer, idx, err_idx, add_layer=True):
         component = f"{component}_{layer}"
     match idx:
         case (seq, feat):
-            if feat == err_idx: feat = 'ε'
-            return f'{seq}, {component}/{feat}'
+            if feat == err_idx:
+                feat = "ε"
+            return f"{seq}, {component}/{feat}"
         case (feat,):
-            if feat == err_idx: feat = 'ε'
-            return f'{component}/{feat}'
-        case _: raise ValueError(f"Invalid idx: {idx}")
+            if feat == err_idx:
+                feat = "ε"
+            return f"{component}/{feat}"
+        case _:
+            raise ValueError(f"Invalid idx: {idx}")
+
 
 def normalize_weight(weight, edge_scale, cfg: Config):
     edge_min, edge_max = edge_scale
-    if cfg.edge_thickness_normalization == 'linear':
-        n_weight = weight / (edge_max)   # in [-1, 1]
-        n_weight = (n_weight + 1) / 2    # in [0, 1]
-    elif cfg.edge_thickness_normalization == 'log':
+    if cfg.edge_thickness_normalization == "linear":
+        n_weight = weight / (edge_max)  # in [-1, 1]
+        n_weight = (n_weight + 1) / 2  # in [0, 1]
+    elif cfg.edge_thickness_normalization == "log":
         ooms = np.log(edge_max) - np.log(edge_min) + 1e-6
-        n_weight = (np.log(abs(weight)) - np.log(edge_min)) / ooms # in [0, 1]
+        n_weight = (np.log(abs(weight)) - np.log(edge_min)) / ooms  # in [0, 1]
     # rescale n_weight to be in [0.1, 1] so that minimum thickness is still visible
-    scaled_weight = 0.1 + abs(n_weight)*0.9
+    scaled_weight = 0.1 + abs(n_weight) * 0.9
     return str(scaled_weight * cfg.pen_thickness)
+
 
 def _to_hex(number, scale):
     number = number / scale
@@ -54,20 +60,28 @@ def _to_hex(number, scale):
     if number < 0:
         # Increase towards red, full intensity at -1.0
         red = 255
-        green = blue = int((1 + number) * 255)  # Increase other components less as it gets more negative
+        green = blue = int(
+            (1 + number) * 255
+        )  # Increase other components less as it gets more negative
     elif number > 0:
         # Increase towards blue, full intensity at 1.0
         blue = 255
-        red = green = int((1 - number) * 255)  # Increase other components less as it gets more positive
+        red = green = int(
+            (1 - number) * 255
+        )  # Increase other components less as it gets more positive
     else:
         # Exact 0, resulting in white
         red = green = blue = 255
 
     # decide whether text is black or white depending on darkness of color
-    text_hex = "#000000" if (red*0.299 + green*0.587 + blue*0.114) > 170 else "#ffffff"
+    text_hex = (
+        "#000000"
+        if (red * 0.299 + green * 0.587 + blue * 0.114) > 170
+        else "#ffffff"
+    )
 
     # Convert to hex, ensuring each component is 2 digits
-    hex_code = f'#{red:02X}{green:02X}{blue:02X}'
+    hex_code = f"#{red:02X}{green:02X}{blue:02X}"
 
     return hex_code, text_hex
 
@@ -76,37 +90,49 @@ def _get_label(name, annotations=None):
     if annotations is None:
         return name
     else:
-        match name.split(', '):
+        match name.split(", "):
             case seq, feat:
                 if feat in annotations:
-                    component = feat.split('/')[0]
-                    component = feat.split('_')[0]
-                    return f'{seq}, {annotations[feat]} ({component})'
+                    component = feat.split("/")[0]
+                    component = feat.split("_")[0]
+                    return f"{seq}, {annotations[feat]} ({component})"
                 return name
             case [feat]:
                 if feat in annotations:
-                    component = feat.split('/')[0]
-                    component = feat.split('_')[0]
-                    return f'{annotations[feat]} ({component})'
+                    component = feat.split("/")[0]
+                    component = feat.split("_")[0]
+                    return f"{annotations[feat]} ({component})"
 
 
-def nodes_by_submod_add_entry(nodes, nodes_by_submod, node_name, cfg: Config, hist_agg: HistAggregator):
+def nodes_by_submod_add_entry(
+    nodes, nodes_by_submod, node_name, cfg: Config, hist_agg: HistAggregator
+):
     submod_nodes = nodes[node_name].to_tensor()
     topk_ind = threshold_effects(submod_nodes, cfg, node_name, hist_agg)
 
     nodes_by_submod[node_name] = {
-        tuple(idx) : submod_nodes[tuple(idx)].item() for idx in topk_ind
+        tuple(idx): submod_nodes[tuple(idx)].item() for idx in topk_ind
     }
 
 
-def plot_circuit(nodes, edges, annotations, cfg: Config, hist_agg: HistAggregator, example_text: str | None = None, save_path: str = ''):
-    if cfg.aggregation == 'none':
-        plot_circuit_posaligned(nodes, edges, annotations, example_text, cfg, save_path)
+def plot_circuit(
+    nodes,
+    edges,
+    annotations,
+    cfg: Config,
+    hist_agg: HistAggregator,
+    example_text: str | None = None,
+    save_path: str = "",
+):
+    if cfg.aggregation == "none":
+        plot_circuit_posaligned(
+            nodes, edges, annotations, example_text, cfg, save_path
+        )
         return
 
     # get min and max node effects
-    mins = {n: v.to_tensor().min() for n, v in nodes.items() if n != 'y'}
-    maxs = {n: v.to_tensor().max() for n, v in nodes.items() if n != 'y'}
+    mins = {n: v.to_tensor().min() for n, v in nodes.items() if n != "y"}
+    maxs = {n: v.to_tensor().max() for n, v in nodes.items() if n != "y"}
     min_effect = min(mins.values())
     max_effect = max(maxs.values())
     scale = max(abs(min_effect), abs(max_effect))
@@ -114,20 +140,34 @@ def plot_circuit(nodes, edges, annotations, cfg: Config, hist_agg: HistAggregato
     get_label = partial(_get_label, annotations=annotations)
 
     nodes_by_submod = {}
-    if cfg.first_component == 'embed':
-        nodes_by_submod_add_entry(nodes, nodes_by_submod, 'embed', cfg, hist_agg)
+    if cfg.first_component == "embed":
+        nodes_by_submod_add_entry(
+            nodes, nodes_by_submod, "embed", cfg, hist_agg
+        )
 
     for layer in range(cfg.layers):
-        for component in ['attn', 'mlp', 'resid']:
-            node_name = f'{component}_{layer}'
-            nodes_by_submod_add_entry(nodes, nodes_by_submod, node_name, cfg, hist_agg)
+        for component in ["attn", "mlp", "resid"]:
+            node_name = f"{component}_{layer}"
+            nodes_by_submod_add_entry(
+                nodes, nodes_by_submod, node_name, cfg, hist_agg
+            )
 
     pruned_G = build_pruned_graph(nodes, edges, nodes_by_submod, cfg)
-    G = build_formatted_graph(nodes, edges, to_hex, get_label, cfg, nodes_by_submod, example_text, pruned_G)
+    G = build_formatted_graph(
+        nodes,
+        edges,
+        to_hex,
+        get_label,
+        cfg,
+        nodes_by_submod,
+        example_text,
+        pruned_G,
+    )
 
     if not os.path.exists(os.path.dirname(save_path)):
         os.makedirs(os.path.dirname(save_path))
-    G.render(save_path, format='png', cleanup=False)
+    G.render(save_path, format="png", cleanup=False)
+
 
 def compute_edge_scale(jacobian):
     if jacobian.values().shape[0] == 0:
@@ -137,8 +177,11 @@ def compute_edge_scale(jacobian):
     if edge_min == 0.0:
         pass
     # largest edge weight
-    edge_max = float(max(abs(jacobian.values().min()), abs(jacobian.values().max())))
+    edge_max = float(
+        max(abs(jacobian.values().min()), abs(jacobian.values().max()))
+    )
     return edge_min, edge_max
+
 
 def iterate_edge_feats(nodes, edges, nodes_by_submod, layer, cfg: Config):
     for up, down in iterate_edges(edges, layer, cfg.first_component):
@@ -149,29 +192,38 @@ def iterate_edge_feats(nodes, edges, nodes_by_submod, layer, cfg: Config):
             continue
         for upstream_idx in nodes_by_submod[up].keys():
             for downstream_idx in nodes_by_submod[down].keys():
-                weight = jacobian[tuple(downstream_idx)][tuple(upstream_idx)].item()
-                uname = get_name(up, layer, upstream_idx, err_idx, add_layer=False)
-                dname = get_name(down, layer, downstream_idx, err_idx, add_layer=False)
+                weight = jacobian[tuple(downstream_idx)][
+                    tuple(upstream_idx)
+                ].item()
+                uname = get_name(
+                    up, layer, upstream_idx, err_idx, add_layer=False
+                )
+                dname = get_name(
+                    down, layer, downstream_idx, err_idx, add_layer=False
+                )
                 if abs(weight) > 0:
                     yield uname, dname, weight, edge_scale
 
+
 def build_pruned_graph(nodes, edges, nodes_by_submod, cfg: Config):
-    if cfg.prune_method == 'none':   # do no pruning
+    if cfg.prune_method == "none":  # do no pruning
         return None
 
     G = nx.DiGraph()
 
     # construct graph in networkx
     for layer in trange(cfg.layers):
-        for (uname, dname, _, _) in iterate_edge_feats(nodes, edges, nodes_by_submod, layer, cfg):
+        for uname, dname, _, _ in iterate_edge_feats(
+            nodes, edges, nodes_by_submod, layer, cfg
+        ):
             G.add_edge(uname, dname)
 
     # add final edge to output node 'y'
-    if cfg.resid_posn == 'post':
-        err_idx = nodes[f'resid_{cfg.layers-1}'].shape[0]
-        terminal_node = 'y'
-        for idx in nodes_by_submod[f'resid_{cfg.layers-1}'].keys():
-            name = get_name('resid', cfg.layers-1, idx, err_idx)
+    if cfg.resid_posn == "post":
+        err_idx = nodes[f"resid_{cfg.layers-1}"].shape[0]
+        terminal_node = "y"
+        for idx in nodes_by_submod[f"resid_{cfg.layers-1}"].keys():
+            name = get_name("resid", cfg.layers - 1, idx, err_idx)
             G.add_edge(name, terminal_node)
 
     # restrict to nodes that have a path to terminal
@@ -179,28 +231,42 @@ def build_pruned_graph(nodes, edges, nodes_by_submod, cfg: Config):
     nodes_reaching_terminal = nx.descendants(reversed_graph, terminal_node)
     nodes_reaching_terminal.add(terminal_node)
 
-    if cfg.prune_method in ['source-sink', 'first-layer-sink']:
+    if cfg.prune_method in ["source-sink", "first-layer-sink"]:
         # restrict to nodes that are reachable from a starter node
         relevant_nodes = set()
-        if cfg.prune_method == 'first-layer-sink':
-            if cfg.first_component == 'embed':
-                starter_components = ['embed']
+        if cfg.prune_method == "first-layer-sink":
+            if cfg.first_component == "embed":
+                starter_components = ["embed"]
             else:
-                starter_components = ['attn_0', 'mlp_0', 'resid_0']
+                starter_components = ["attn_0", "mlp_0", "resid_0"]
         else:
             starter_components = [cfg.first_component]
 
-        for component in starter_components:  # allow any first layer node type to be a starter
-            starter_nodes = nodes_by_submod[component].keys()  # check all features in this component
+        for (
+            component
+        ) in (
+            starter_components
+        ):  # allow any first layer node type to be a starter
+            starter_nodes = nodes_by_submod[
+                component
+            ].keys()  # check all features in this component
             for starter in starter_nodes:
                 err_idx = nodes[component].shape[0]
-                s = get_name(component, 0, starter, err_idx, add_layer=False)  # if this feature reaches the end, then add all descendant nodes
-                if s in nodes_reaching_terminal:  # if the starter actually goes to terminal
-                    reachable_nodes = nx.descendants(G, s)  # all nodes reachable from this starter node
-                    relevant_nodes.update(reachable_nodes.intersection(nodes_reaching_terminal))  # if go to terminal and reachable by this starter
+                s = get_name(
+                    component, 0, starter, err_idx, add_layer=False
+                )  # if this feature reaches the end, then add all descendant nodes
+                if (
+                    s in nodes_reaching_terminal
+                ):  # if the starter actually goes to terminal
+                    reachable_nodes = nx.descendants(
+                        G, s
+                    )  # all nodes reachable from this starter node
+                    relevant_nodes.update(
+                        reachable_nodes.intersection(nodes_reaching_terminal)
+                    )  # if go to terminal and reachable by this starter
                     relevant_nodes.add(s)
 
-    elif cfg.prune_method == 'sink-backwards':
+    elif cfg.prune_method == "sink-backwards":
         # restrict to nodes that reach the output, regardless of where they start
         relevant_nodes = nodes_reaching_terminal
 
@@ -208,10 +274,12 @@ def build_pruned_graph(nodes, edges, nodes_by_submod, cfg: Config):
     pruned_graph = G.subgraph(relevant_nodes).copy()
     return pruned_graph
 
+
 def add_node_prune_filter(name, G, pruned_G, **kwargs):
     if pruned_G is not None and name not in pruned_G.nodes:
         return
     G.node(name, **kwargs)
+
 
 def add_edge_prune_filter(uname, dname, G, pruned_G, **kwargs):
     if pruned_G is not None and (uname, dname) not in pruned_G.edges:
@@ -219,30 +287,63 @@ def add_edge_prune_filter(uname, dname, G, pruned_G, **kwargs):
     G.edge(uname, dname, **kwargs)
 
 
-def add_layer_nodes_to_graph(G: Digraph, component: str, layer: int, nodes: dict[str, t.Tensor],
-                             nodes_by_submod: dict[str, t.Tensor], to_hex: Callable, get_label: Callable, pruned_G: nx.DiGraph):
-    component_name = f'{component}_{layer}' if layer != -1 else component
+def add_layer_nodes_to_graph(
+    G: Digraph,
+    component: str,
+    layer: int,
+    nodes: dict[str, t.Tensor],
+    nodes_by_submod: dict[str, t.Tensor],
+    to_hex: Callable,
+    get_label: Callable,
+    pruned_G: nx.DiGraph,
+):
+    component_name = f"{component}_{layer}" if layer != -1 else component
     err_idx = nodes[component_name].shape[0]
-    with G.subgraph(name=f'layer {layer} {component}') as subgraph:
-        subgraph.attr(rank='same')
+    with G.subgraph(name=f"layer {layer} {component}") as subgraph:
+        subgraph.attr(rank="same")
         max_seq_pos = None
         for idx, effect in nodes_by_submod[component_name].items():
             name = get_name(component, layer, idx, err_idx)
             fillhex, texthex = to_hex(effect)
-            if name[-1:].endswith('ε'):
-                add_node_prune_filter(name, subgraph, pruned_G, shape='triangle', width="1.6", height="0.8", fixedsize="true",
-                                fillcolor=fillhex, style='filled', fontcolor=texthex)
+            if name[-1:].endswith("ε"):
+                add_node_prune_filter(
+                    name,
+                    subgraph,
+                    pruned_G,
+                    shape="triangle",
+                    width="1.6",
+                    height="0.8",
+                    fixedsize="true",
+                    fillcolor=fillhex,
+                    style="filled",
+                    fontcolor=texthex,
+                )
             else:
-                add_node_prune_filter(name, subgraph, pruned_G, label=get_label(name), fillcolor=fillhex, fontcolor=texthex,
-                                style='filled')
+                add_node_prune_filter(
+                    name,
+                    subgraph,
+                    pruned_G,
+                    label=get_label(name),
+                    fillcolor=fillhex,
+                    fontcolor=texthex,
+                    style="filled",
+                )
             # if sequence position is present, separate nodes by sequence position
             match idx:
                 case (seq, _):
-                    subgraph.node(f'{component}_{layer}_#{seq}_pre', style='invis')
-                    subgraph.node(f'{component}_{layer}_#{seq}_post', style='invis')
+                    subgraph.node(
+                        f"{component}_{layer}_#{seq}_pre", style="invis"
+                    )
+                    subgraph.node(
+                        f"{component}_{layer}_#{seq}_post", style="invis"
+                    )
 
-                    subgraph.edge(f'{component}_{layer}_#{seq}_pre', name, style='invis')
-                    subgraph.edge(name, f'{component}_{layer}_#{seq}_post', style='invis')
+                    subgraph.edge(
+                        f"{component}_{layer}_#{seq}_pre", name, style="invis"
+                    )
+                    subgraph.edge(
+                        name, f"{component}_{layer}_#{seq}_post", style="invis"
+                    )
 
                     if max_seq_pos is None or seq > max_seq_pos:
                         max_seq_pos = seq
@@ -250,51 +351,94 @@ def add_layer_nodes_to_graph(G: Digraph, component: str, layer: int, nodes: dict
         if max_seq_pos is None:
             return
         # make sure the auxiliary ordering nodes are in right order
-        for seq in reversed(range(max_seq_pos+1)):
-            if f'{component}_{layer}_#{seq}_pre' in ''.join(subgraph.body):
+        for seq in reversed(range(max_seq_pos + 1)):
+            if f"{component}_{layer}_#{seq}_pre" in "".join(subgraph.body):
                 for seq_prev in range(seq):
-                    if f'{component}_{layer}_#{seq_prev}_post' in ''.join(subgraph.body):
-                        subgraph.edge(f'{component}_{layer}_#{seq_prev}_post', f'{component}_{layer}_#{seq}_pre', style='invis')
+                    if f"{component}_{layer}_#{seq_prev}_post" in "".join(
+                        subgraph.body
+                    ):
+                        subgraph.edge(
+                            f"{component}_{layer}_#{seq_prev}_post",
+                            f"{component}_{layer}_#{seq}_pre",
+                            style="invis",
+                        )
 
-def build_formatted_graph(nodes, edges, to_hex, get_label, cfg: Config, nodes_by_submod, example_text, pruned_G):
-    G = Digraph(name='Feature circuit')
-    G.graph_attr.update(rankdir='BT', newrank='true')
+
+def build_formatted_graph(
+    nodes,
+    edges,
+    to_hex,
+    get_label,
+    cfg: Config,
+    nodes_by_submod,
+    example_text,
+    pruned_G,
+):
+    G = Digraph(name="Feature circuit")
+    G.graph_attr.update(rankdir="BT", newrank="true")
     G.node_attr.update(shape="box", style="rounded")
 
-    if cfg.first_component == 'embed':
-        add_layer_nodes_to_graph(G, 'embed', -1, nodes, nodes_by_submod, to_hex, get_label, pruned_G)
+    if cfg.first_component == "embed":
+        add_layer_nodes_to_graph(
+            G, "embed", -1, nodes, nodes_by_submod, to_hex, get_label, pruned_G
+        )
 
     for layer in trange(cfg.layers):
         # add all nodes for this layer
-        for component in ['attn', 'mlp', 'resid']:
-            add_layer_nodes_to_graph(G, component, layer, nodes, nodes_by_submod, to_hex, get_label, pruned_G)
+        for component in ["attn", "mlp", "resid"]:
+            add_layer_nodes_to_graph(
+                G,
+                component,
+                layer,
+                nodes,
+                nodes_by_submod,
+                to_hex,
+                get_label,
+                pruned_G,
+            )
 
         # add all edges
-        for (uname, dname, weight, edge_scale) in iterate_edge_feats(nodes, edges, nodes_by_submod, layer, cfg):
-            add_edge_prune_filter(uname, dname, G, pruned_G,
-                                penwidth=normalize_weight(weight, edge_scale, cfg),
-                                color = 'red' if weight < 0 else 'blue')
+        for uname, dname, weight, edge_scale in iterate_edge_feats(
+            nodes, edges, nodes_by_submod, layer, cfg
+        ):
+            add_edge_prune_filter(
+                uname,
+                dname,
+                G,
+                pruned_G,
+                penwidth=normalize_weight(weight, edge_scale, cfg),
+                color="red" if weight < 0 else "blue",
+            )
 
     # the cherry on top
-    formatted_text = example_text.replace('\\', '\\\\')
-    if cfg.resid_posn == 'post':
-        add_node_prune_filter('y', G, pruned_G, shape='diamond', xlabel=formatted_text)
-        err_idx = nodes[f'resid_{cfg.layers-1}'].shape[0]
-        jacobian = edges[f'resid_{cfg.layers-1}']['y']
+    formatted_text = example_text.replace("\\", "\\\\")
+    if cfg.resid_posn == "post":
+        add_node_prune_filter(
+            "y", G, pruned_G, shape="diamond", xlabel=formatted_text
+        )
+        err_idx = nodes[f"resid_{cfg.layers-1}"].shape[0]
+        jacobian = edges[f"resid_{cfg.layers-1}"]["y"]
         edge_scale = compute_edge_scale(jacobian)
 
-        for idx in nodes_by_submod[f'resid_{cfg.layers-1}'].keys():
+        for idx in nodes_by_submod[f"resid_{cfg.layers-1}"].keys():
             weight = jacobian[tuple(idx)].item()
-            name = get_name('resid', cfg.layers-1, idx, err_idx)
+            name = get_name("resid", cfg.layers - 1, idx, err_idx)
 
-            add_edge_prune_filter(name, 'y', G, pruned_G,
-                                penwidth=normalize_weight(weight, edge_scale, cfg),
-                                color = 'red' if weight < 0 else 'blue')
+            add_edge_prune_filter(
+                name,
+                "y",
+                G,
+                pruned_G,
+                penwidth=normalize_weight(weight, edge_scale, cfg),
+                color="red" if weight < 0 else "blue",
+            )
 
     return G
 
 
-def plot_circuit_posaligned(nodes, edges, annotations, example_text, cfg: Config, save_dir: str):
+def plot_circuit_posaligned(
+    nodes, edges, annotations, example_text, cfg: Config, save_dir: str
+):
     raise NotImplementedError
     # # get min and max node effects
     # min_effect = min([v.to_tensor().min() for n, v in nodes.items() if n != 'y'])
@@ -379,7 +523,6 @@ def plot_circuit_posaligned(nodes, edges, annotations, example_text, cfg: Config
     #                         if f'{component}_{layer}_#{seq_prev}_post' in ''.join(subgraph.body):
     #                             subgraph.edge(f'{component}_{layer}_#{seq_prev}_post', f'{component}_{layer}_#{seq}_pre', style='invis')
 
-
     #     for component in ['attn', 'mlp']:
     #         if layer == -1: continue
     #         for upstream_idx in nodes_by_submod[f'{component}_{layer}'].keys():
@@ -410,7 +553,6 @@ def plot_circuit_posaligned(nodes, edges, annotations, example_text, cfg: Config
     #                         color = 'red' if weight < 0 else 'blue'
     #                     )
     #                     edgeset.add((uname, dname))
-
 
     # # the cherry on top
     # G.node('y', shape='diamond')
