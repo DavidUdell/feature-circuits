@@ -137,17 +137,9 @@ def get_circuit(
 
     features_by_submod = {}
 
-    # print("Effect Sums:")
+    print("Effects:")
     for submod in all_submods:
         effect = effects[submod].to_tensor()
-        # effect_last = effect[:, -1, :]
-
-        # # Debug program state print
-        # print(
-        #     get_submod_repr(submod),
-        #     str(list(effect_last.shape)) + ":",
-        #     round(effect_last.sum().item(), 1),
-        # )
 
         if cfg.collect_hists > 0:
             hist_agg.compute_node_hist(submod, effect)
@@ -186,6 +178,8 @@ def get_circuit(
 
     n_layers = len(resids)
 
+    # The main original construction of the nodes object, pre-thresholding.
+    # It's just a tensor of effects at a sublayer, per sublayer, for now.
     nodes = {"y": total_effect}
     if embed is not None:
         nodes["embed"] = effects[embed]
@@ -193,6 +187,19 @@ def get_circuit(
         nodes[f"attn_{i}"] = effects[attns[i]]
         nodes[f"mlp_{i}"] = effects[mlps[i]]
         nodes[f"resid_{i}"] = effects[resids[i]]
+
+    for idx, effect in nodes.items():
+        if effect is None:
+            print(idx, "None")
+            print()
+        else:
+            print(idx, "effects", list(effect.act.shape), ":")
+            print(effect.act.to("cpu"))
+            print()
+            print(idx, "error effects", list(effect.resc.shape), ":")
+            print(effect.resc.to("cpu"))
+            print()
+    print()
 
     if cfg.nodes_only:
         if cfg.aggregation == "sum":
@@ -591,7 +598,7 @@ def main():
     parser.add_argument(
         "--aggregation",
         type=str,
-        default="sum",
+        default="last",
         choices=["sum", "last", "none"],
         help=dedent(
             """

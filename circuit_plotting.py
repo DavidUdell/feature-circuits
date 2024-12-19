@@ -107,6 +107,8 @@ def _get_label(name, annotations=None):
 def nodes_by_submod_add_entry(
     nodes, nodes_by_submod, node_name, cfg: Config, hist_agg: HistAggregator
 ):
+    """Add a node to the submodule index/effect dict."""
+
     submod_nodes = nodes[node_name].to_tensor()
     topk_ind = threshold_effects(submod_nodes, cfg, node_name, hist_agg)
 
@@ -124,6 +126,8 @@ def plot_circuit(
     example_text: str | None = None,
     save_path: str = "",
 ):
+    """Plot and render the overall circuit."""
+
     if cfg.aggregation == "none":
         plot_circuit_posaligned(
             nodes, edges, annotations, example_text, cfg, save_path
@@ -139,7 +143,10 @@ def plot_circuit(
     to_hex = partial(_to_hex, scale=scale)
     get_label = partial(_get_label, annotations=annotations)
 
+    # The fleshing out of nodes_by_submod is what to watch here, for
+    # replicability.
     nodes_by_submod = {}
+
     if cfg.first_component == "embed":
         nodes_by_submod_add_entry(
             nodes, nodes_by_submod, "embed", cfg, hist_agg
@@ -152,8 +159,8 @@ def plot_circuit(
                 nodes, nodes_by_submod, node_name, cfg, hist_agg
             )
 
-    pruned_G = build_pruned_graph(nodes, edges, nodes_by_submod, cfg)
-    G = build_formatted_graph(
+    pruned_graph = build_pruned_graph(nodes, edges, nodes_by_submod, cfg)
+    graph = build_formatted_graph(
         nodes,
         edges,
         to_hex,
@@ -161,12 +168,12 @@ def plot_circuit(
         cfg,
         nodes_by_submod,
         example_text,
-        pruned_G,
+        pruned_graph,
     )
 
     if not os.path.exists(os.path.dirname(save_path)):
         os.makedirs(os.path.dirname(save_path))
-    G.render(save_path, format="png", cleanup=False)
+    graph.render(save_path, format="png", cleanup=False)
 
 
 def compute_edge_scale(jacobian):
@@ -297,6 +304,8 @@ def add_layer_nodes_to_graph(
     get_label: Callable,
     pruned_graph: nx.DiGraph,
 ):
+    """Add layer nodes to a DiGraph object."""
+
     component_name = f"{component}_{layer}" if layer != -1 else component
     err_idx = nodes[component_name].shape[0]
     with graph.subgraph(name=f"layer {layer} {component}") as subgraph:
@@ -305,6 +314,7 @@ def add_layer_nodes_to_graph(
         for idx, effect in nodes_by_submod[component_name].items():
             name = get_name(component, layer, idx, err_idx)
             fillhex, texthex = to_hex(effect)
+
             if name[-1:].endswith("ε"):
                 add_node_prune_filter(
                     name,
