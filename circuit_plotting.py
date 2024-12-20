@@ -112,6 +112,10 @@ def nodes_by_submod_add_entry(
     submod_nodes = nodes[node_name].to_tensor()
     topk_ind = threshold_effects(submod_nodes, cfg, node_name, hist_agg)
 
+    print(node_name, "select nodes:")
+    print([element for sublist in topk_ind for element in sublist])
+    print()
+
     nodes_by_submod[node_name] = {
         tuple(idx): submod_nodes[tuple(idx)].item() for idx in topk_ind
     }
