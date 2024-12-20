@@ -610,7 +610,7 @@ def main():
     parser.add_argument(
         "--node_threshold",
         type=float,
-        default=1.67,
+        default=2.0,
         help="Indirect effect threshold for keeping circuit nodes.",
     )
     parser.add_argument(
@@ -623,7 +623,7 @@ def main():
     parser.add_argument(
         "--max_nodes",
         type=int,
-        default=100,
+        default=None,
         help=dedent(
             """
             Limit feats/submod to at most this many, regardless of thresholding
