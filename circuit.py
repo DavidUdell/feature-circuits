@@ -610,7 +610,7 @@ def main():
     parser.add_argument(
         "--node_threshold",
         type=float,
-        default=5.67,
+        default=1.67,
         help="Indirect effect threshold for keeping circuit nodes.",
     )
     parser.add_argument(
