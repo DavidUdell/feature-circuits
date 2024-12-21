@@ -634,7 +634,7 @@ def main():
     parser.add_argument(
         "--edge_threshold",
         type=float,
-        default=5.67,
+        default=2.0,
         help="Indirect effect threshold for keeping edges.",
     )
     parser.add_argument(

@@ -732,6 +732,13 @@ def jvp(
         ],
         device=model.device,
     ).T
+
+    up_nodes = list(set(downstream_indices.tolist()[-1]))
+    if 131072 in up_nodes:
+        up_nodes.remove(131072)
+    print("Up nodes:", up_nodes)
+    print()
+
     upstream_indices = t.cat(
         [
             t.stack(
