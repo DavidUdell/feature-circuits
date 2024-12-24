@@ -669,7 +669,7 @@ def jvp(
         y_res = y - y_hat
         downstream_act = SparseAct(act=g, res=y_res).save()
 
-        to_backprops = (left_vec @ downstream_act).to_tensor()
+        to_backprops = (left_vec @ downstream_act).to_tensor().save()
 
         for downstream_feat in downstream_features:
             downstream_feat = tuple(downstream_feat)
@@ -711,13 +711,14 @@ def jvp(
     edge_name = [
         get_submod_repr(m) for m in (upstream_submod, downstream_submod)
     ]
+
     print(
-        f"\tnnz {edge_name}",
-        sum(
-            vjv_indices[tuple(downstream_feat)].shape[0]
-            for downstream_feat in downstream_features
-        ),
+        " -> ".join(edge_name),
+        "backpropped effects",
+        str(list(to_backprops.shape)) + ":",
     )
+    print(to_backprops.to("cpu").detach())
+    print()
 
     if cfg.collect_hists > 0:
         hist.aggregate_traced()
@@ -732,12 +733,6 @@ def jvp(
         ],
         device=model.device,
     ).T
-
-    up_nodes = list(set(downstream_indices.tolist()[-1]))
-    if 131072 in up_nodes:
-        up_nodes.remove(131072)
-    print("Up nodes:", up_nodes)
-    print()
 
     upstream_indices = t.cat(
         [
