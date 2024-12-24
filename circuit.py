@@ -137,7 +137,6 @@ def get_circuit(
 
     features_by_submod = {}
 
-    print("Effects:")
     for submod in all_submods:
         effect = effects[submod].to_tensor()
 
@@ -187,19 +186,6 @@ def get_circuit(
         nodes[f"attn_{i}"] = effects[attns[i]]
         nodes[f"mlp_{i}"] = effects[mlps[i]]
         nodes[f"resid_{i}"] = effects[resids[i]]
-
-    for idx, effect in nodes.items():
-        if effect is None:
-            print(idx, "None")
-            print()
-        else:
-            print(idx, "effects", list(effect.act.shape), ":")
-            print(effect.act.to("cpu"))
-            print()
-            print(idx, "error effects", list(effect.resc.shape), ":")
-            print(effect.resc.to("cpu"))
-            print()
-    print()
 
     if cfg.nodes_only:
         if cfg.aggregation == "sum":

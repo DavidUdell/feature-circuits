@@ -720,6 +720,13 @@ def jvp(
     print(to_backprops.to("cpu").detach())
     print()
 
+    for i, j in zip(vjv_indices.items(), vjv_values.items()):
+        print(f"Token {i[0][1]} down dim {i[0][-1]} top up nodes:")
+        print("   ", i[-1].to("cpu"))
+        print("   ", j[-1].to("cpu"))
+        print()
+    print()
+
     if cfg.collect_hists > 0:
         hist.aggregate_traced()
         return get_empty_edge(model.device)
