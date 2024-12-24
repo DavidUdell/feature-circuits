@@ -293,13 +293,7 @@ def get_circuit(
     for label, edge in edges.items():
         print(label, "edges:")
         for k, v in edge.items():
-            indices = v.indices().tolist()
-            flat = [i for sublist in indices for i in sublist]
-            flat = list(set(flat))
-            if 131072 in flat:
-                flat.remove(131072)
-                flat.append("error")
-            print(" ->", k, flat)
+            print(" =>", k, v.size())
         print()
     print()
 
