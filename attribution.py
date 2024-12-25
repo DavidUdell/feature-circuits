@@ -721,8 +721,19 @@ def jvp(
     print()
 
     for i, j in zip(vjv_indices.items(), vjv_values.items()):
-        print(f"Token {i[0][1]} down dim {i[0][-1]} top up nodes:")
-        print("   ", i[-1].to("cpu"))
+        if i[0][1] != 1:
+            assert i[0][1] == 0
+            continue
+
+        dim_idx = i[0][-1]
+        if dim_idx == 131072:
+            continue
+
+        print(f"Down dim {dim_idx} top up nodes:")
+        if i[-1][0].item() > 131073:
+            print("   ", i[-1].to("cpu") - 131073)
+        else:
+            print("   ", i[-1].to("cpu"))
         print("   ", j[-1].to("cpu"))
         print()
     print()
