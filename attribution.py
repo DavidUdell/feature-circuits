@@ -681,7 +681,9 @@ def jvp(
 
             x_res.grad = t.zeros_like(x_res)
 
-            vjv = (upstream_act.grad @ right_vec).to_tensor()  # eq 5 is vjv
+            vjv = (
+                (upstream_act.grad @ right_vec).to_tensor().save()
+            )  # eq 5 is vjv
             to_backprops[downstream_feat].backward(retain_graph=True)
 
             if cfg.collect_hists > 0:
@@ -712,30 +714,8 @@ def jvp(
         get_submod_repr(m) for m in (upstream_submod, downstream_submod)
     ]
 
-    print(
-        " -> ".join(edge_name),
-        "backpropped effects",
-        str(list(to_backprops.shape)) + ":",
-    )
-    print(to_backprops.to("cpu").detach())
-    print()
-
-    for i, j in zip(vjv_indices.items(), vjv_values.items()):
-        if i[0][1] != 1:
-            assert i[0][1] == 0
-            continue
-
-        dim_idx = i[0][-1]
-        if dim_idx == 131072:
-            continue
-
-        print(f"Down dim {dim_idx} top up nodes:")
-        if i[-1][0].item() > 131073:
-            print("   ", i[-1].to("cpu") - 131073)
-        else:
-            print("   ", i[-1].to("cpu"))
-        print("   ", j[-1].to("cpu"))
-        print()
+    print(f"Down nodes {edge_name[-1]} upstream grad {vjv.shape}:")
+    print(vjv)
     print()
 
     if cfg.collect_hists > 0:
