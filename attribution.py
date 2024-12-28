@@ -598,23 +598,23 @@ def jvp(
     model,
     dictionaries,
     downstream_submod,
-    downstream_features,
+    indices,
     upstream_submod,
-    left_vec: Union[SparseAct, Dict[int, SparseAct]],
-    right_vec: SparseAct,
+    down_grads: Union[SparseAct, Dict[int, SparseAct]],
+    up_acts: SparseAct,
     cfg: Config,
     hist_agg: HistAggregator,
-    intermediate_stop_grads=None,
+    confounds=None,
 ):
     """
     Return a sparse shape [# downstream features + 1, # upstream features + 1]
     tensor of Jacobian-vector products.
     """
 
-    if intermediate_stop_grads is None:
-        intermediate_stop_grads = []
+    if confounds is None:
+        confounds = []
 
-    if not downstream_features:  # handle empty list
+    if not indices:  # handle empty list
         return get_empty_edge(model.device)
 
     # first run through a test input to figure out which hidden states are
@@ -624,7 +624,7 @@ def jvp(
         for submodule in [
             downstream_submod,
             upstream_submod,
-        ] + intermediate_stop_grads:
+        ] + confounds:
             output_submods[submodule] = submodule.output.save()
 
     is_tuple = {
@@ -644,78 +644,88 @@ def jvp(
         dictionaries[upstream_submod],
     )
 
-    vjv_indices = {}
-    vjv_values = {}
-
+    edge_indices = {}
+    edge_effects = {}
+    gradients = []
     if cfg.collect_hists > 0:
         hist = hist_agg.get_edge_hist(upstream_submod, downstream_submod)
 
     with model.trace(inputs, **tracer_kwargs):
-        # first specify forward pass modifications
-        x = upstream_submod.output.save()
+        # Forward-pass modifications
+
+        up_output = upstream_submod.output.save()
         if is_tuple[upstream_submod]:
-            x = x[0]
-        x_hat, f = upstream_dict(x, output_features=True)
-        x_res = x - x_hat
-        upstream_act = SparseAct(act=f, res=x_res).save()
+            up_output = up_output[0]
+        up_decoded, up_projected = upstream_dict(
+            up_output, output_features=True
+        )
+        up_error = up_output - up_decoded
+        up_act = SparseAct(act=up_projected, res=up_error).save()
+        up_reconstructed = up_decoded + up_error
+
         if is_tuple[upstream_submod]:
-            upstream_submod.output[0][:] = x_hat + x_res
+            upstream_submod.output[0][:] = up_reconstructed
+            upstream_submod.output[0][:].grad = up_reconstructed.grad
         else:
-            upstream_submod.output = x_hat + x_res
-        y = downstream_submod.output
+            upstream_submod.output = up_reconstructed
+            upstream_submod.output.grad = up_reconstructed.grad
+
+        down_output = downstream_submod.output
         if is_tuple[downstream_submod]:
-            y = y[0]
-        y_hat, g = downstream_dict(y, output_features=True)
-        y_res = y - y_hat
-        downstream_act = SparseAct(act=g, res=y_res).save()
+            down_output = down_output[0]
+        down_decoded, down_projected = downstream_dict(
+            down_output, output_features=True
+        )
+        down_error = down_output - down_decoded
+        down_act = SparseAct(act=down_projected, res=down_error).save()
 
-        to_backprops = (left_vec @ downstream_act).to_tensor().save()
+        weighted_scalar = (down_grads @ down_act).to_tensor().save()
 
-        for downstream_feat in downstream_features:
-            downstream_feat = tuple(downstream_feat)
-            for submod in intermediate_stop_grads:
-                if is_tuple[submod]:
-                    submod.output[0].grad = t.zeros_like(submod.output[0])
+        for index in indices:
+            index = tuple(index)
+            for confound in confounds:
+                if is_tuple[confound]:
+                    confound.output[0].grad = t.zeros_like(confound.output[0])
                 else:
-                    submod.output.grad = t.zeros_like(submod.output)
+                    confound.output.grad = t.zeros_like(confound.output)
 
-            x_res.grad = t.zeros_like(x_res)
+            up_error.grad = t.zeros_like(up_error)
 
-            vjv = (
-                (upstream_act.grad @ right_vec).to_tensor().save()
-            )  # eq 5 is vjv
-            to_backprops[downstream_feat].backward(retain_graph=True)
+            marginal_effect = (
+                up_act.grad @ up_acts
+            ).to_tensor()  # eq 5 is vjv
+            gradient = up_act.grad.to_tensor().save()
+            gradients.append(gradient)
+            weighted_scalar[index].backward(retain_graph=True)
 
             if cfg.collect_hists > 0:
-                hist.compute_hists(vjv, trace=True)
+                hist.compute_hists(marginal_effect, trace=True)
 
-            vjv_ind, vjv_val = threshold_effects(
-                vjv,
+            marginal_indices, marginal_effects = threshold_effects(
+                marginal_effect,
                 cfg,
                 (upstream_submod, downstream_submod),
                 hist_agg,
                 stack=False,
             )
 
-            vjv_indices[downstream_feat] = vjv_ind.save()
-            vjv_values[downstream_feat] = vjv_val.save()
+            edge_indices[index] = marginal_indices.save()
+            edge_effects[index] = marginal_effects.save()
 
     # construct return values
-
     ## get shapes
     d_downstream_contracted = (
-        (downstream_act.value @ downstream_act.value).to_tensor()
+        (down_act.value @ down_act.value).to_tensor()
     ).shape
-    d_upstream_contracted = (
-        (upstream_act.value @ upstream_act.value).to_tensor()
-    ).shape
+    d_upstream_contracted = ((up_act.value @ up_act.value).to_tensor()).shape
 
     edge_name = [
         get_submod_repr(m) for m in (upstream_submod, downstream_submod)
     ]
-
-    print(f"Down nodes {edge_name[-1]} upstream grad {vjv.shape}:")
-    print(vjv)
+    print("->".join(edge_name), "upstream grads:")
+    for i, g in zip(indices, gradients):
+        print("   ", i[-1])
+        print("   ", g[:, -1, :].to("cpu"))
     print()
 
     if cfg.collect_hists > 0:
@@ -726,8 +736,8 @@ def jvp(
     downstream_indices = t.tensor(
         [
             downstream_feat
-            for downstream_feat in downstream_features
-            for _ in vjv_indices[tuple(downstream_feat)].value
+            for downstream_feat in indices
+            for _ in edge_indices[tuple(downstream_feat)].value
         ],
         device=model.device,
     ).T
@@ -736,31 +746,31 @@ def jvp(
         [
             t.stack(
                 t.unravel_index(
-                    vjv_indices[tuple(downstream_feat)].value,
+                    edge_indices[tuple(downstream_feat)].value,
                     d_upstream_contracted,
                 ),
                 dim=1,
             )
-            for downstream_feat in downstream_features
+            for downstream_feat in indices
         ],
         dim=0,
     ).T
-    vjv_indices = t.cat([downstream_indices, upstream_indices], dim=0).to(
+    edge_indices = t.cat([downstream_indices, upstream_indices], dim=0).to(
         model.device
     )
-    vjv_values = t.cat(
+    edge_effects = t.cat(
         [
-            vjv_values[tuple(downstream_feat)].value
-            for downstream_feat in downstream_features
+            edge_effects[tuple(downstream_feat)].value
+            for downstream_feat in indices
         ],
         dim=0,
     )
-    if vjv_values.shape[0] == 0:
+    if edge_effects.shape[0] == 0:
         return get_empty_edge(model.device)
 
     return t.sparse_coo_tensor(
-        vjv_indices,
-        vjv_values,
+        edge_indices,
+        edge_effects,
         (*d_downstream_contracted, *d_upstream_contracted),
         is_coalesced=True,
     )

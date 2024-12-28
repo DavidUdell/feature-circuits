@@ -216,7 +216,7 @@ def get_circuit(
             deltas[upstream],  # right_vec
             cfg,
             hist_agg,
-            intermediate_stop_grads=intermediate_stop_grads,
+            confounds=intermediate_stop_grads,
         )
 
     # now we work backward through the model to get the edges
