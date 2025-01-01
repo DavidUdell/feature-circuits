@@ -646,7 +646,8 @@ def jvp(
 
     edge_indices = {}
     edge_effects = {}
-    gradients = []
+    marginal_effects_list = []
+
     if cfg.collect_hists > 0:
         hist = hist_agg.get_edge_hist(upstream_submod, downstream_submod)
 
@@ -692,10 +693,10 @@ def jvp(
             up_error.grad = t.zeros_like(up_error)
 
             marginal_effect = (
-                up_act.grad @ up_acts
-            ).to_tensor()  # eq 5 is vjv
-            gradient = up_act.grad.to_tensor().save()
-            gradients.append(gradient)
+                (up_act.grad @ up_acts).to_tensor().save()
+            )  # eq 5 is vjv
+            # gradient = up_act.grad.to_tensor().save()
+            marginal_effects_list.append(marginal_effect)
             weighted_scalar[index].backward(retain_graph=True)
 
             if cfg.collect_hists > 0:
@@ -722,10 +723,9 @@ def jvp(
     edge_name = [
         get_submod_repr(m) for m in (upstream_submod, downstream_submod)
     ]
-    print("->".join(edge_name), "upstream grads:")
-    for i, g in zip(indices, gradients):
-        print("   ", i[-1])
-        print("   ", g[:, -1, :].to("cpu"))
+    print("->".join(edge_name), "marginal effects:")
+    for i, e in zip(indices, marginal_effects_list):
+        print("   ", i[-1], list(e[:, -1, :].shape), e[:, -1, :].to("cpu"))
     print()
 
     if cfg.collect_hists > 0:
