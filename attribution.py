@@ -725,7 +725,12 @@ def jvp(
     ]
     print("->".join(edge_name), "marginal effects:")
     for i, e in zip(indices, marginal_effects_list):
-        print("   ", i[-1], list(e[:, -1, :].shape), e[:, -1, :].to("cpu"))
+        print(
+            "   ",
+            i[-1],
+            list(e[:, -1, :].squeeze().shape),
+            e[:, -1, :].to("cpu"),
+        )
     print()
 
     if cfg.collect_hists > 0:
