@@ -681,15 +681,20 @@ def jvp(
         down_act = SparseAct(act=down_projected, res=down_error).save()
 
         weighted_scalar = (down_grads @ down_act).to_tensor().save()
-
+        eliminateds: list[list[t.Tensor]] = []
         for index in indices:
             index = tuple(index)
+            eliminated = []
             for confound in confounds:
                 if is_tuple[confound]:
+                    # Pass these grads through the autoencoders?
+                    eliminated.append(confound.output[0].grad.save())
                     confound.output[0].grad = t.zeros_like(confound.output[0])
                 else:
+                    # Pass these grads through the autoencoders?
+                    eliminated.append(confound.output.grad.save())
                     confound.output.grad = t.zeros_like(confound.output)
-
+            eliminateds.append(eliminated)
             up_error.grad = t.zeros_like(up_error)
 
             marginal_effect = (
@@ -724,14 +729,22 @@ def jvp(
         get_submod_repr(m) for m in (upstream_submod, downstream_submod)
     ]
     print("->".join(edge_name), "marginal effects:")
-    for i, e in zip(indices, marginal_effects_list):
+    for i, e, elim in zip(indices, marginal_effects_list, eliminateds):
         print(
             "   ",
             i[-1],
             list(e[:, -1, :].squeeze().shape),
             e[:, -1, :].to("cpu"),
         )
-    print()
+        if elim:
+            print("    Eliminated confounds:")
+            for i in elim:
+                print(
+                    "   ",
+                    list(i[:, -1, :].squeeze().shape),
+                    i[:, -1, :].to("cpu"),
+                )
+        print()
 
     if cfg.collect_hists > 0:
         hist.aggregate_traced()
