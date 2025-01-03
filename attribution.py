@@ -686,13 +686,18 @@ def jvp(
             index = tuple(index)
             eliminated = []
             for confound in confounds:
+                mat = dictionaries[confound].encoder.weight.data
                 if is_tuple[confound]:
-                    # Pass these grads through the autoencoders?
-                    eliminated.append(confound.output[0].grad.save())
+                    base_grad = confound.output[0].grad
+
+                    proj_grad = t.einsum("pn,...n->...p", mat, base_grad)
+                    eliminated.append(proj_grad.save())
                     confound.output[0].grad = t.zeros_like(confound.output[0])
                 else:
-                    # Pass these grads through the autoencoders?
-                    eliminated.append(confound.output.grad.save())
+                    base_grad = confound.output.grad
+
+                    proj_grad = t.einsum("pn,...n->...p", mat, base_grad)
+                    eliminated.append(proj_grad.clone().save())
                     confound.output.grad = t.zeros_like(confound.output)
             eliminateds.append(eliminated)
             up_error.grad = t.zeros_like(up_error)
@@ -732,17 +737,16 @@ def jvp(
     for i, e, elim in zip(indices, marginal_effects_list, eliminateds):
         print(
             "   ",
-            i[-1],
+            i[-1] if i[-1] != 131072 else "error",
             list(e[:, -1, :].squeeze().shape),
             e[:, -1, :].to("cpu"),
         )
         if elim:
-            print("    Eliminated confounds:")
             for i in elim:
+                assert list(i.squeeze()[-1, :].shape) == [131072]
                 print(
-                    "   ",
-                    list(i[:, -1, :].squeeze().shape),
-                    i[:, -1, :].to("cpu"),
+                    "       -",
+                    i[:, -1, :].detach().to("cpu"),
                 )
         print()
 
